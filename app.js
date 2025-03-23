@@ -600,7 +600,7 @@ function saveOrder() {
 
 function generateBillNumber() {
     const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 1000);
+    const random = Math.floor(Math.random() * 10);
     return `BILL-${timestamp}-${random}`;
 }
 
@@ -620,13 +620,45 @@ function printReceipt() {
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
 
+    // Prompt for payment method
+    const paymentMethod = prompt("Select Payment Method:\n1. Cash\n2. Online Payment\n3. Credit\nEnter 1, 2, or 3:", "1");
+    let paymentDetails = {};
+    switch (paymentMethod) {
+        case "1":
+            paymentDetails = { method: "Cash" };
+            break;
+        case "2":
+            paymentDetails = { method: "Online Payment" };
+            break;
+        case "3":
+            const creditorName = prompt("Enter Creditor Name:", "");
+            if (!creditorName) {
+                alert("Creditor Name is required for Credit payment!");
+                return;
+            }
+            const creditorMobile = prompt("Enter Creditor Mobile Number (optional):", "");
+            paymentDetails = {
+                method: "Credit",
+                creditor: {
+                    name: creditorName,
+                    mobile: creditorMobile || "N/A",
+                    paid: false // Track if credit is paid
+                }
+            };
+            break;
+        default:
+            alert("Invalid payment method! Bill not finalized.");
+            return;
+    }
+
     const orderDetails = {
         billNumber: billNumber,
         table: currentTable,
         items: [...currentOrder],
         total: total.toFixed(2),
         timestamp: timestamp,
-        date: timestamp.split('T')[0]
+        date: timestamp.split('T')[0],
+        payment: paymentDetails
     };
 
     let orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
@@ -639,6 +671,7 @@ function printReceipt() {
         Bill Number: ${billNumber}
         Table: ${currentTable}
         Date: ${new Date().toLocaleString()}
+        Payment Method: ${paymentDetails.method}${paymentDetails.method === "Credit" ? ` (Creditor: ${paymentDetails.creditor.name})` : ""}
         -----------------------
         ${currentOrder.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join("\n")}
         -----------------------
