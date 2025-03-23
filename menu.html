@@ -42,6 +42,10 @@
                             <input type="number" id="itemPriceMenu" placeholder="Price" step="0.01" required>
                             <button type="submit" class="btn btn-success">Add Item</button>
                         </form>
+                        <div class="import-section" style="margin-top: 20px;">
+                            <input type="file" id="excelFile" accept=".xlsx, .xls">
+                            <button id="importExcel" class="btn btn-primary">Import from Excel</button>
+                        </div>
                     </section>
                     <section class="card">
                         <h3>Menu Items</h3>
@@ -51,6 +55,8 @@
             </div>
         </main>
     </div>
+    <!-- Add SheetJS library for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
