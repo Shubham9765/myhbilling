@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setupSidebarToggle();
             if (path.includes("dashboard.html")) {
                 loadTables();
-                loadMenu();
+                loadMenu(); // Ensure menu is loaded for dashboard
                 setupInputs();
             } else if (path.includes("tables.html")) {
                 loadTables();
@@ -122,12 +122,9 @@ function loadTables() {
     const tableList = document.getElementById("tableList");
     tables = JSON.parse(localStorage.getItem("tables")) || [];
 
-    console.log("Loading tables:", tables);
-
     if (tableGrid) {
         if (tables.length === 0) {
             tableGrid.innerHTML = `<p>No tables available. Set up tables in tables.html</p>`;
-            console.log("No tables found in localStorage, showing message.");
         } else {
             tableGrid.innerHTML = tables
                 .map(table => `
@@ -140,7 +137,6 @@ function loadTables() {
                     </div>`)
                 .join("");
             filterTables(document.getElementById("tableInput")?.value || "");
-            console.log("Tables loaded into grid:", tableGrid.innerHTML);
         }
     }
 
@@ -198,7 +194,6 @@ function filterTables(query) {
                     <span class="table-name">${table.name}</span>
                 </div>`)
             .join("") : `<p>No matching tables</p>`;
-        console.log("Filtered tables:", filteredTables);
     }
 }
 
@@ -258,6 +253,7 @@ function deleteTable(index) {
 let menu = JSON.parse(localStorage.getItem("menu")) || [];
 
 function loadMenu() {
+    menu = JSON.parse(localStorage.getItem("menu")) || []; // Always refresh from localStorage
     const menuList = document.getElementById("menuList");
     if (menuList) {
         menuList.innerHTML = menu
@@ -275,6 +271,7 @@ function setupMenuForm() {
     const menuForm = document.getElementById("menuForm");
     const importExcelBtn = document.getElementById("importExcel");
     const excelFileInput = document.getElementById("excelFile");
+    const downloadDemoExcelBtn = document.getElementById("downloadDemoExcel");
 
     if (menuForm) {
         menuForm.addEventListener("submit", (e) => {
@@ -307,8 +304,8 @@ function setupMenuForm() {
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
                 const importedMenu = jsonData.map(row => ({
-                    code: row.ItemCode || row.code || "",
-                    name: row.ItemName || row.name || "",
+                    code: String(row.ItemCode || row.code || ""),
+                    name: String(row.ItemName || row.name || ""),
                     price: parseFloat(row.Price || row.price) || 0
                 })).filter(item => item.code && item.name && item.price > 0);
 
@@ -326,6 +323,25 @@ function setupMenuForm() {
                 excelFileInput.value = "";
             };
             reader.readAsArrayBuffer(file);
+        });
+    }
+
+    if (downloadDemoExcelBtn) {
+        downloadDemoExcelBtn.addEventListener("click", () => {
+            // Create a demo menu data
+            const demoData = [
+                { ItemCode: "B001", ItemName: "Burger", Price: 5.99 },
+                { ItemCode: "D002", ItemName: "Drink", Price: 1.99 },
+                { ItemCode: "S003", ItemName: "Salad", Price: 3.49 }
+            ];
+
+            // Create a new workbook and worksheet
+            const ws = XLSX.utils.json_to_sheet(demoData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Menu Demo");
+
+            // Generate and download the Excel file
+            XLSX.writeFile(wb, "menu_demo.xlsx");
         });
     }
 }
@@ -353,7 +369,6 @@ function saveMenuEdit(index) {
     loadMenu();
 }
 
-// New function to delete a menu item
 function deleteMenuItem(index) {
     if (confirm(`Are you sure you want to delete ${menu[index].name} from the menu?`)) {
         menu.splice(index, 1);
@@ -422,11 +437,9 @@ function setupInputs() {
         if (e.key === "Enter") {
             e.preventDefault();
             if (highlightedIndex >= 0 && items.length > 0) {
-                // Select highlighted suggestion
                 const code = items[highlightedIndex].getAttribute("onclick").match(/'([^']+)'/)[1];
                 selectItem(code);
             } else {
-                // Direct code or name match
                 const query = itemInput.value.trim().toLowerCase();
                 const matchedItem = menu.find(item =>
                     item.code.toLowerCase() === query || item.name.toLowerCase() === query
@@ -434,7 +447,6 @@ function setupInputs() {
                 if (matchedItem) {
                     selectItem(matchedItem.code);
                 } else if (items.length > 0) {
-                    // If no exact match but suggestions exist, select the first one
                     const code = items[0].getAttribute("onclick").match(/'([^']+)'/)[1];
                     selectItem(code);
                 } else {
@@ -450,7 +462,7 @@ function setupInputs() {
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             if (items.length > 0) {
-                highlightedIndex = Math.max(highlightedIndex - 1, 0); // Changed from -1 to 0 to keep selection in list
+                highlightedIndex = Math.max(highlightedIndex - 1, 0);
                 updateHighlight(items);
             }
         }
@@ -617,12 +629,9 @@ function printReceipt() {
         date: timestamp.split('T')[0]
     };
 
-    console.log("Saving order to history:", orderDetails);
-
     let orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     orderHistory.push(orderDetails);
     localStorage.setItem("orderHistory", JSON.stringify(orderHistory));
-    console.log("Updated orderHistory in localStorage:", orderHistory);
 
     const receipt = `
         ${restaurantName}
@@ -713,8 +722,6 @@ function loadReports() {
         return;
     }
 
-    console.log("Loading orderHistory:", orderHistory);
-
     function calculateSummary(orders) {
         const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
         const totalBills = orders.length;
@@ -735,7 +742,6 @@ function loadReports() {
     function displayOrders(orders) {
         if (orders.length === 0) {
             reportList.innerHTML = `<p>No orders found.</p>`;
-            console.log("No orders to display.");
             return;
         }
         const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
@@ -757,13 +763,11 @@ function loadReports() {
                     <hr>
                 </div>`).join("")}
         `;
-        console.log("Orders displayed:", orders);
     }
 
     function displayDailyReports(reports) {
         if (reports.length === 0) {
             reportList.innerHTML = `<p>No daily reports found.</p>`;
-            console.log("No daily reports to display.");
             return;
         }
         const totalDailyAmount = reports.reduce((sum, report) => sum + parseFloat(report.totalSales), 0).toFixed(2);
@@ -794,7 +798,6 @@ function loadReports() {
                     <hr>
                 </div>`).join("")}
         `;
-        console.log("Daily reports displayed:", reports);
     }
 
     window.deleteOrder = function(index) {
