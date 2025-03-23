@@ -508,3 +508,69 @@ body {
 .btn-success:hover {
     background-color: #218838;
 }
+.filter-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-inputs {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-date {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.report-item {
+    margin: 10px 0;
+}
+
+.creditor-item {
+    background-color: #fff3f3;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+}
