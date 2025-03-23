@@ -656,3 +656,51 @@ body {
     from { transform: translateY(50px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+/* Creditor Section */
+.creditor-item {
+    background: #fff3f3;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+/* Buttons */
+.btn-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+/* Match modal colors to your theme */
+.payment-btn:hover,
+.payment-btn.active {
+    background: #007bff !important;
+    color: #fff !important;
+    border-color: #007bff !important;
+}
+
+.credit-details input:focus {
+    border-color: #007bff !important;
+}
+
+/* Ensure consistency with other buttons */
+.btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
