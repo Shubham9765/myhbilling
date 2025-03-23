@@ -618,7 +618,6 @@ function printReceipt() {
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
 
-    // Create payment modal
     const modal = document.createElement("div");
     modal.innerHTML = `
         <div class="payment-modal-overlay">
@@ -640,7 +639,6 @@ function printReceipt() {
     `;
     document.body.appendChild(modal);
 
-    // Modal styles (could move to styles.css)
     const style = document.createElement("style");
     style.textContent = `
         .payment-modal-overlay {
@@ -685,14 +683,14 @@ function printReceipt() {
             transition: all 0.3s ease;
         }
         .payment-btn:hover {
-            background: #2a5298;
+            background: #007bff;
             color: #fff;
-            border-color: #2a5298;
+            border-color: #007bff;
         }
         .payment-btn.active {
-            background: #2a5298;
+            background: #007bff;
             color: #fff;
-            border-color: #2a5298;
+            border-color: #007bff;
         }
         .credit-details {
             margin-bottom: 20px;
@@ -706,7 +704,7 @@ function printReceipt() {
             font-size: 1em;
         }
         .credit-details input:focus {
-            border-color: #2a5298;
+            border-color: #007bff;
             outline: none;
         }
         @keyframes fadeIn {
@@ -720,7 +718,6 @@ function printReceipt() {
     `;
     document.head.appendChild(style);
 
-    // Modal logic
     let selectedMethod = null;
     const paymentBtns = modal.querySelectorAll(".payment-btn");
     const creditDetails = modal.querySelector("#creditDetails");
@@ -756,7 +753,9 @@ function printReceipt() {
                 creditor: {
                     name: creditorName,
                     mobile: creditorMobileInput.value.trim() || "N/A",
-                    paid: false
+                    paid: false,
+                    remainingAmount: total.toFixed(2),
+                    paymentHistory: []
                 }
             };
         } else {
@@ -862,7 +861,6 @@ function loadWaiters() {
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
-    const creditorPayments = JSON.parse(localStorage.getItem("creditorPayments")) || [];
     const reportList = document.getElementById("reportList");
     const filterType = document.getElementById("filterType");
     const filterInputs = document.getElementById("filterInputs");
@@ -871,10 +869,17 @@ function loadReports() {
     const searchBillBtn = document.getElementById("searchBillBtn");
     const exportExcelBtn = document.getElementById("exportExcel");
 
-    // Check for required elements and provide fallback
     if (!reportList || !filterType || !filterInputs || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
-        console.error("One or more report elements are missing in the DOM.");
-        if (reportList) reportList.innerHTML = "<p>Error: Required elements missing in reports.html.</p>";
+        console.error("Missing elements:", {
+            reportList: !!reportList,
+            filterType: !!filterType,
+            filterInputs: !!filterInputs,
+            applyFilterBtn: !!applyFilterBtn,
+            searchBillInput: !!searchBillInput,
+            searchBillBtn: !!searchBillBtn,
+            exportExcelBtn: !!exportExcelBtn
+        });
+        if (reportList) reportList.innerHTML = "<p>Error: Required elements missing in reports.html. Check console for details.</p>";
         return;
     }
 
@@ -897,19 +902,11 @@ function loadReports() {
                     <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
                 `;
                 break;
-            case "creditors":
-            case "daily":
-            case "":
-                filterInputs.innerHTML = ""; // No inputs needed
+            default:
+                filterInputs.innerHTML = "";
                 break;
         }
     }
-
-    updateFilterInputs();
-    filterType.addEventListener("change", () => {
-        updateFilterInputs();
-        applyFilter(filterType.value);
-    });
 
     function calculateSummary(orders) {
         const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
@@ -991,15 +988,20 @@ function loadReports() {
 
     function displayCreditors() {
         const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
-        if (unpaidCredits.length === 0 && creditorPayments.length === 0) {
+        const paidCredits = orderHistory.filter(order => order.payment.method === "Credit" && order.payment.creditor.paid);
+        if (unpaidCredits.length === 0 && paidCredits.length === 0) {
             reportList.innerHTML = `<p>No creditor records found.</p>`;
             return;
         }
-        const totalCreditAmount = unpaidCredits.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
+
+        const totalUnpaidAmount = unpaidCredits.reduce((sum, order) => sum + parseFloat(order.payment.creditor.remainingAmount || order.total), 0).toFixed(2);
+        const totalPaidAmount = paidCredits.reduce((sum, order) => sum + order.payment.creditor.paymentHistory.reduce((ps, p) => ps + parseFloat(p.amount), 0), 0).toFixed(2);
+
         reportList.innerHTML = `
             <div class="report-summary">
-                <p><strong>Total Unpaid Credit Amount:</strong> $${totalCreditAmount}</p>
+                <p><strong>Total Unpaid Amount:</strong> $${totalUnpaidAmount}</p>
                 <p><strong>Total Unpaid Creditors:</strong> ${unpaidCredits.length}</p>
+                <p><strong>Total Paid Amount:</strong> $${totalPaidAmount}</p>
             </div>
             <h3>Unpaid Credits</h3>
             ${unpaidCredits.length > 0 ? unpaidCredits.map((order, index) => `
@@ -1007,22 +1009,37 @@ function loadReports() {
                     <p><strong>Bill Number:</strong> ${order.billNumber}</p>
                     <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
                     <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
-                    <p><strong>Amount:</strong> $${order.total}</p>
+                    <p><strong>Total Amount:</strong> $${order.total}</p>
+                    <p><strong>Remaining Amount:</strong> $${order.payment.creditor.remainingAmount || order.total}</p>
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
                     <button class="btn btn-success btn-small" onclick="markCreditPaid('${order.billNumber}')">Mark Paid</button>
                     <hr>
                 </div>`).join("") : "<p>No unpaid credits.</p>"}
             <h3>Credit Payment History</h3>
-            ${creditorPayments.length > 0 ? creditorPayments.map(payment => `
+            ${paidCredits.length > 0 ? paidCredits.map(order => `
                 <div class="report-item">
-                    <p><strong>Bill Number:</strong> ${payment.billNumber}</p>
-                    <p><strong>Creditor:</strong> ${payment.creditorName}</p>
-                    <p><strong>Amount Paid:</strong> $${payment.amount}</p>
-                    <p><strong>Payment Date:</strong> ${new Date(payment.timestamp).toLocaleString()}</p>
+                    <p><strong>Bill Number:</strong> ${order.billNumber}</p>
+                    <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
+                    <p><strong>Total Amount:</strong> $${order.total}</p>
+                    <p><strong>Payments:</strong></p>
+                    <ul>
+                        ${order.payment.creditor.paymentHistory.map(payment => `
+                            <li>$${payment.amount} on ${new Date(payment.timestamp).toLocaleString()}</li>
+                        `).join("")}
+                    </ul>
                     <hr>
                 </div>`).join("") : "<p>No credit payments recorded.</p>"}
         `;
     }
+
+    window.deleteOrder = function(index) {
+        if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+            let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
+            allOrders.splice(index, 1);
+            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
+            applyFilter(filterType.value);
+        }
+    };
 
     window.markCreditPaid = function(billNumber) {
         let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
@@ -1033,37 +1050,47 @@ function loadReports() {
         }
 
         const order = allOrders[orderIndex];
-        if (order.payment.method !== "Credit" || order.payment.creditor.paid) {
-            alert("This order is not an unpaid credit!");
+        if (order.payment.method !== "Credit") {
+            alert("This order is not a credit order!");
             return;
         }
 
-        const amountPaid = prompt(`Enter amount paid by ${order.payment.creditor.name} (Total: $${order.total}):`, order.total);
+        const remainingAmount = parseFloat(order.payment.creditor.remainingAmount || order.total);
+        const amountPaid = prompt(`Enter amount paid by ${order.payment.creditor.name} (Remaining: $${remainingAmount}):`, remainingAmount);
         if (!amountPaid || isNaN(amountPaid) || parseFloat(amountPaid) <= 0) {
             alert("Invalid amount entered!");
             return;
         }
 
         const paidAmount = parseFloat(amountPaid);
-        if (paidAmount > parseFloat(order.total)) {
-            alert("Amount paid cannot exceed the total!");
+        if (paidAmount > remainingAmount) {
+            alert("Amount paid cannot exceed the remaining amount!");
             return;
         }
 
         if (confirm(`Confirm payment of $${paidAmount} for ${order.payment.creditor.name} (Bill: ${billNumber})?`)) {
-            order.payment.creditor.paid = true; // Mark as paid in orderHistory
-            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
+            // Initialize paymentHistory if not exists
+            if (!order.payment.creditor.paymentHistory) {
+                order.payment.creditor.paymentHistory = [];
+            }
 
-            let creditorPayments = JSON.parse(localStorage.getItem("creditorPayments")) || [];
-            creditorPayments.push({
-                billNumber: billNumber,
-                creditorName: order.payment.creditor.name,
+            // Add payment to history
+            order.payment.creditor.paymentHistory.push({
                 amount: paidAmount.toFixed(2),
-                total: order.total,
                 timestamp: new Date().toISOString()
             });
-            localStorage.setItem("creditorPayments", JSON.stringify(creditorPayments));
 
+            // Update remaining amount
+            const newRemaining = remainingAmount - paidAmount;
+            order.payment.creditor.remainingAmount = newRemaining.toFixed(2);
+
+            // Mark as fully paid if remaining is 0
+            if (newRemaining <= 0) {
+                order.payment.creditor.paid = true;
+            }
+
+            // Save updated orderHistory
+            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
             displayCreditors(); // Refresh display
         }
     };
@@ -1139,12 +1166,15 @@ function loadReports() {
                 filename = "daily_reports.xlsx";
                 break;
             case "creditors":
-                const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
-                data = unpaidCredits.map(order => ({
+                const allCredits = orderHistory.filter(order => order.payment.method === "Credit");
+                data = allCredits.map(order => ({
                     "Bill Number": order.billNumber,
                     "Creditor Name": order.payment.creditor.name,
                     "Mobile": order.payment.creditor.mobile,
-                    "Amount": order.total,
+                    "Total Amount": order.total,
+                    "Remaining Amount": order.payment.creditor.paid ? "0.00" : (order.payment.creditor.remainingAmount || order.total),
+                    "Paid": order.payment.creditor.paid ? "Yes" : "No",
+                    "Payment History": order.payment.creditor.paymentHistory ? order.payment.creditor.paymentHistory.map(p => `$${p.amount} on ${new Date(p.timestamp).toLocaleString()}`).join("; ") : "N/A",
                     "Date": new Date(order.timestamp).toLocaleString()
                 }));
                 filename = "creditors.xlsx";
@@ -1195,30 +1225,25 @@ function loadReports() {
         XLSX.writeFile(wb, filename);
     }
 
-    // Initial display
+    updateFilterInputs();
     displayOrders(orderHistory);
 
-    applyFilterBtn.addEventListener("click", () => {
-        applyFilter(filterType.value);
-    });
-
+    applyFilterBtn.addEventListener("click", () => applyFilter(filterType.value));
     searchBillBtn.addEventListener("click", () => {
         const billNumber = searchBillInput.value.trim();
         if (billNumber) {
             const filteredOrders = orderHistory.filter(order => order.billNumber === billNumber);
-            if (filteredOrders.length > 0) {
-                displayOrders(filteredOrders);
-            } else {
-                reportList.innerHTML = `<p>No orders found for bill number: ${billNumber}</p>`;
-            }
+            displayOrders(filteredOrders);
         } else {
             displayOrders(orderHistory);
         }
     });
-
     exportExcelBtn.addEventListener("click", exportToExcel);
+    filterType.addEventListener("change", () => {
+        updateFilterInputs();
+        applyFilter(filterType.value);
+    });
 }
-
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
