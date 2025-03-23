@@ -388,3 +388,12 @@ body {
     padding: 3px 8px;
     font-size: 12px;
 }
+.import-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.import-section input[type="file"] {
+    padding: 5px;
+}
