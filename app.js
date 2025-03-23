@@ -862,7 +862,7 @@ function loadWaiters() {
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
-    const creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || [];
+    const creditorPayments = JSON.parse(localStorage.getItem("creditorPayments")) || [];
     const reportList = document.getElementById("reportList");
     const filterType = document.getElementById("filterType");
     const filterInputs = document.getElementById("filterInputs");
@@ -991,51 +991,46 @@ function loadReports() {
 
     function displayCreditors() {
         const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
-        if (unpaidCredits.length === 0) {
-            reportList.innerHTML = `<p>No unpaid creditors found.</p>`;
+        if (unpaidCredits.length === 0 && creditorPayments.length === 0) {
+            reportList.innerHTML = `<p>No creditor records found.</p>`;
             return;
         }
         const totalCreditAmount = unpaidCredits.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
         reportList.innerHTML = `
             <div class="report-summary">
                 <p><strong>Total Unpaid Credit Amount:</strong> $${totalCreditAmount}</p>
-                <p><strong>Total Creditors:</strong> ${unpaidCredits.length}</p>
+                <p><strong>Total Unpaid Creditors:</strong> ${unpaidCredits.length}</p>
             </div>
-            ${unpaidCredits.map((order, index) => `
+            <h3>Unpaid Credits</h3>
+            ${unpaidCredits.length > 0 ? unpaidCredits.map((order, index) => `
                 <div class="report-item creditor-item">
                     <p><strong>Bill Number:</strong> ${order.billNumber}</p>
                     <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
                     <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
                     <p><strong>Amount:</strong> $${order.total}</p>
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${order.billNumber}')">Add Payment</button>
+                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${order.billNumber}')">Mark Paid</button>
                     <hr>
-                </div>`).join("")}
+                </div>`).join("") : "<p>No unpaid credits.</p>"}
             <h3>Credit Payment History</h3>
-            ${creditPayments.length > 0 ? creditPayments.map(payment => `
+            ${creditorPayments.length > 0 ? creditorPayments.map(payment => `
                 <div class="report-item">
                     <p><strong>Bill Number:</strong> ${payment.billNumber}</p>
                     <p><strong>Creditor:</strong> ${payment.creditorName}</p>
-                    <p><strong>Amount:</strong> $${payment.amount}</p>
+                    <p><strong>Amount Paid:</strong> $${payment.amount}</p>
                     <p><strong>Payment Date:</strong> ${new Date(payment.timestamp).toLocaleString()}</p>
                     <hr>
                 </div>`).join("") : "<p>No credit payments recorded.</p>"}
         `;
     }
 
-    window.deleteOrder = function(index) {
-        if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
-            let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
-            allOrders.splice(index, 1);
-            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
-            applyFilter(filterType.value);
-        }
-    }
-
     window.markCreditPaid = function(billNumber) {
         let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
         const orderIndex = allOrders.findIndex(o => o.billNumber === billNumber);
-        if (orderIndex === -1) return;
+        if (orderIndex === -1) {
+            alert("Order not found!");
+            return;
+        }
 
         const order = allOrders[orderIndex];
         if (order.payment.method !== "Credit" || order.payment.creditor.paid) {
@@ -1043,22 +1038,35 @@ function loadReports() {
             return;
         }
 
-        if (confirm(`Mark credit payment of $${order.total} for ${order.payment.creditor.name} as paid?`)) {
-            order.payment.creditor.paid = true;
+        const amountPaid = prompt(`Enter amount paid by ${order.payment.creditor.name} (Total: $${order.total}):`, order.total);
+        if (!amountPaid || isNaN(amountPaid) || parseFloat(amountPaid) <= 0) {
+            alert("Invalid amount entered!");
+            return;
+        }
+
+        const paidAmount = parseFloat(amountPaid);
+        if (paidAmount > parseFloat(order.total)) {
+            alert("Amount paid cannot exceed the total!");
+            return;
+        }
+
+        if (confirm(`Confirm payment of $${paidAmount} for ${order.payment.creditor.name} (Bill: ${billNumber})?`)) {
+            order.payment.creditor.paid = true; // Mark as paid in orderHistory
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
 
-            let creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || [];
-            creditPayments.push({
+            let creditorPayments = JSON.parse(localStorage.getItem("creditorPayments")) || [];
+            creditorPayments.push({
                 billNumber: billNumber,
                 creditorName: order.payment.creditor.name,
-                amount: order.total,
+                amount: paidAmount.toFixed(2),
+                total: order.total,
                 timestamp: new Date().toISOString()
             });
-            localStorage.setItem("creditPayments", JSON.stringify(creditPayments));
+            localStorage.setItem("creditorPayments", JSON.stringify(creditorPayments));
 
-            displayCreditors();
+            displayCreditors(); // Refresh display
         }
-    }
+    };
 
     function applyFilter(type) {
         let filteredOrders = [...orderHistory];
