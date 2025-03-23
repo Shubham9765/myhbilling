@@ -446,3 +446,20 @@ body {
 .btn-secondary:hover {
     background-color: #5a6268;
 }
+.filter-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-inputs {
+    display: flex;
+    gap: 10px;
+}
+
+.filter-date {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
