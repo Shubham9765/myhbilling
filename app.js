@@ -486,10 +486,22 @@ function loadOrder(tableName) {
                     <td>${item.price.toFixed(2)}</td>
                     <td>${item.qty}</td>
                     <td>${(item.price * item.qty).toFixed(2)}</td>
+                    <td><button class="btn btn-danger btn-small" onclick="deleteItem('${tableName}', ${index})">Delete</button></td>
                 </tr>
             `)
             .join("");
         updateGrandTotal(currentOrder);
+    }
+}
+
+// New function to delete an item from the order
+window.deleteItem = function(tableName, index) {
+    if (confirm("Are you sure you want to delete this item from the order?")) {
+        let currentOrder = JSON.parse(localStorage.getItem(`order_${tableName}`)) || [];
+        currentOrder.splice(index, 1);
+        localStorage.setItem(`order_${tableName}`, JSON.stringify(currentOrder));
+        loadOrder(tableName);
+        loadTables(); // Update table status
     }
 }
 
@@ -648,7 +660,6 @@ function loadReports() {
         const totalBills = orders.length;
         const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
         
-        // Calculate most sold item
         const itemQuantities = {};
         orders.forEach(order => {
             order.items.forEach(item => {
@@ -699,7 +710,6 @@ function loadReports() {
         const totalDailyReports = reports.length;
         const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
         
-        // Calculate most sold item across daily reports
         const itemQuantities = {};
         reports.forEach(report => {
             Object.entries(report.itemsSold).forEach(([item, qty]) => {
@@ -727,7 +737,6 @@ function loadReports() {
         console.log("Daily reports displayed:", reports);
     }
 
-    // Delete function
     window.deleteOrder = function(index) {
         if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
             let currentOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
@@ -761,7 +770,6 @@ function loadReports() {
         }
     }
 
-    // Initial display: show all orders
     displayOrders(orderHistory);
 
     applyFilterBtn.addEventListener("click", () => {
