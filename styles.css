@@ -588,3 +588,71 @@ body {
     margin-bottom: 10px;
     border-radius: 5px;
 }
+/* Already included in printReceipt, but for styles.css: */
+.payment-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.payment-modal {
+    background: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+.payment-options {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.payment-btn {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.payment-btn:hover, .payment-btn.active {
+    background: #2a5298;
+    color: #fff;
+    border-color: #2a5298;
+}
+.credit-details input {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+}
+.credit-details input:focus {
+    border-color: #2a5298;
+    outline: none;
+}
+.btn-secondary {
+    background: #6c757d;
+    color: #fff;
+    margin-left: 10px;
+}
+.btn-secondary:hover {
+    background: #5a6268;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
