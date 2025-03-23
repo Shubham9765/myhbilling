@@ -716,11 +716,15 @@ function loadReports() {
     const applyFilterBtn = document.getElementById("applyFilter");
     const searchBillInput = document.getElementById("searchBill");
     const searchBillBtn = document.getElementById("searchBillBtn");
+    const exportExcelBtn = document.getElementById("exportExcel");
 
-    if (!reportList || !filterType || !filterValue || !applyFilterBtn || !searchBillInput || !searchBillBtn) {
+    if (!reportList || !filterType || !filterValue || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
         console.error("One or more report elements are missing in the DOM.");
         return;
     }
+
+    let currentOrders = [...orderHistory]; // Store current filtered/displayed orders
+    let currentDailyReports = [...dailyReports]; // Store current filtered daily reports
 
     function calculateSummary(orders) {
         const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
@@ -740,6 +744,7 @@ function loadReports() {
     }
 
     function displayOrders(orders) {
+        currentOrders = orders; // Update currentOrders for export
         if (orders.length === 0) {
             reportList.innerHTML = `<p>No orders found.</p>`;
             return;
@@ -766,6 +771,7 @@ function loadReports() {
     }
 
     function displayDailyReports(reports) {
+        currentDailyReports = reports; // Update currentDailyReports for export
         if (reports.length === 0) {
             reportList.innerHTML = `<p>No daily reports found.</p>`;
             return;
@@ -802,12 +808,12 @@ function loadReports() {
 
     window.deleteOrder = function(index) {
         if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
-            let currentOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
-            currentOrders.splice(index, 1);
-            localStorage.setItem("orderHistory", JSON.stringify(currentOrders));
+            let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
+            allOrders.splice(index, 1);
+            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
             const type = filterType.value;
             const value = filterValue.value;
-            let filteredOrders = [...currentOrders];
+            let filteredOrders = [...allOrders];
             
             if (type === "day" && value) {
                 filteredOrders = filteredOrders.filter(order => new Date(order.date).toLocaleDateString() === new Date(value).toLocaleDateString());
@@ -831,6 +837,53 @@ function loadReports() {
             }
             displayOrders(filteredOrders);
         }
+    }
+
+    function exportToExcel() {
+        const type = filterType.value;
+        let data = [];
+        let filename = "report";
+
+        if (type === "daily") {
+            // Export daily reports
+            data = currentDailyReports.map(report => ({
+                Date: new Date(report.date).toLocaleDateString(),
+                "Total Sales": report.totalSales,
+                "Items Sold": Object.entries(report.itemsSold).map(([item, qty]) => `${item} x${qty}`).join(", ")
+            }));
+            filename = "daily_reports.xlsx";
+        } else {
+            // Export order history (flatten items into rows)
+            data = currentOrders.flatMap(order => {
+                const baseRow = {
+                    "Bill Number": order.billNumber || "N/A",
+                    Table: order.table,
+                    Date: new Date(order.timestamp).toLocaleString(),
+                    "Grand Total": order.total
+                };
+                return order.items.map((item, index) => ({
+                    ...baseRow,
+                    "Item Name": item.name,
+                    "Item Code": item.code,
+                    "Item Price": item.price.toFixed(2),
+                    "Quantity": item.qty,
+                    "Item Total": (item.price * item.qty).toFixed(2),
+                    // Only include base fields in the first row of each order
+                    ...(index === 0 ? {} : { "Bill Number": "", Table: "", Date: "", "Grand Total": "" })
+                }));
+            });
+            filename = "order_history.xlsx";
+        }
+
+        if (data.length === 0) {
+            alert("No data available to export!");
+            return;
+        }
+
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Report");
+        XLSX.writeFile(wb, filename);
     }
 
     displayOrders(orderHistory);
@@ -880,8 +933,9 @@ function loadReports() {
             displayOrders(orderHistory);
         }
     });
-}
 
+    exportExcelBtn.addEventListener("click", exportToExcel);
+}
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
