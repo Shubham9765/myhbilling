@@ -424,3 +424,25 @@ body {
 .btn-danger:hover {
     background-color: #c82333;
 }
+.import-section {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap; /* Allow wrapping if needed */
+}
+
+.import-section input[type="file"] {
+    padding: 5px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
