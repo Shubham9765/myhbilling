@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setupSidebarToggle();
             if (path.includes("dashboard.html")) {
                 loadTables();
-                loadMenu(); // Ensure menu is loaded for dashboard
+                loadMenu();
                 setupInputs();
             } else if (path.includes("tables.html")) {
                 loadTables();
@@ -253,7 +253,7 @@ function deleteTable(index) {
 let menu = JSON.parse(localStorage.getItem("menu")) || [];
 
 function loadMenu() {
-    menu = JSON.parse(localStorage.getItem("menu")) || []; // Always refresh from localStorage
+    menu = JSON.parse(localStorage.getItem("menu")) || [];
     const menuList = document.getElementById("menuList");
     if (menuList) {
         menuList.innerHTML = menu
@@ -328,19 +328,15 @@ function setupMenuForm() {
 
     if (downloadDemoExcelBtn) {
         downloadDemoExcelBtn.addEventListener("click", () => {
-            // Create a demo menu data
             const demoData = [
                 { ItemCode: "B001", ItemName: "Burger", Price: 5.99 },
                 { ItemCode: "D002", ItemName: "Drink", Price: 1.99 },
                 { ItemCode: "S003", ItemName: "Salad", Price: 3.49 }
             ];
 
-            // Create a new workbook and worksheet
             const ws = XLSX.utils.json_to_sheet(demoData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Menu Demo");
-
-            // Generate and download the Excel file
             XLSX.writeFile(wb, "menu_demo.xlsx");
         });
     }
@@ -712,19 +708,42 @@ function loadReports() {
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
     const reportList = document.getElementById("reportList");
     const filterType = document.getElementById("filterType");
-    const filterValue = document.getElementById("filterValue");
+    const filterInputs = document.getElementById("filterInputs");
     const applyFilterBtn = document.getElementById("applyFilter");
     const searchBillInput = document.getElementById("searchBill");
     const searchBillBtn = document.getElementById("searchBillBtn");
     const exportExcelBtn = document.getElementById("exportExcel");
 
-    if (!reportList || !filterType || !filterValue || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
+    if (!reportList || !filterType || !filterInputs || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
         console.error("One or more report elements are missing in the DOM.");
         return;
     }
 
-    let currentOrders = [...orderHistory]; // Store current filtered/displayed orders
-    let currentDailyReports = [...dailyReports]; // Store current filtered daily reports
+    let currentOrders = [...orderHistory];
+    let currentDailyReports = [...dailyReports];
+
+    function updateFilterInputs() {
+        const type = filterType.value;
+        filterInputs.innerHTML = "";
+
+        if (type === "day") {
+            filterInputs.innerHTML = `
+                <input type="date" id="filterDay" class="filter-date">
+            `;
+        } else if (type === "month") {
+            filterInputs.innerHTML = `
+                <input type="month" id="filterMonth" class="filter-date">
+            `;
+        } else if (type === "range") {
+            filterInputs.innerHTML = `
+                <input type="date" id="filterStart" class="filter-date" placeholder="Start Date">
+                <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
+            `;
+        }
+    }
+
+    updateFilterInputs();
+    filterType.addEventListener("change", updateFilterInputs);
 
     function calculateSummary(orders) {
         const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
@@ -744,7 +763,7 @@ function loadReports() {
     }
 
     function displayOrders(orders) {
-        currentOrders = orders; // Update currentOrders for export
+        currentOrders = orders;
         if (orders.length === 0) {
             reportList.innerHTML = `<p>No orders found.</p>`;
             return;
@@ -771,7 +790,7 @@ function loadReports() {
     }
 
     function displayDailyReports(reports) {
-        currentDailyReports = reports; // Update currentDailyReports for export
+        currentDailyReports = reports;
         if (reports.length === 0) {
             reportList.innerHTML = `<p>No daily reports found.</p>`;
             return;
@@ -812,30 +831,54 @@ function loadReports() {
             allOrders.splice(index, 1);
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
             const type = filterType.value;
-            const value = filterValue.value;
-            let filteredOrders = [...allOrders];
-            
-            if (type === "day" && value) {
-                filteredOrders = filteredOrders.filter(order => new Date(order.date).toLocaleDateString() === new Date(value).toLocaleDateString());
-            } else if (type === "month" && value) {
-                const [year, month] = value.split('-');
+            applyFilter(type);
+        }
+    }
+
+    function applyFilter(type) {
+        let filteredOrders = [...orderHistory];
+        let filteredDailyReports = [...dailyReports];
+
+        if (type === "day") {
+            const day = document.getElementById("filterDay")?.value;
+            if (day) {
+                filteredOrders = filteredOrders.filter(order => 
+                    new Date(order.date).toISOString().split('T')[0] === day
+                );
+                displayOrders(filteredOrders);
+            } else {
+                displayOrders(orderHistory);
+            }
+        } else if (type === "month") {
+            const month = document.getElementById("filterMonth")?.value;
+            if (month) {
+                const [year, monthNum] = month.split('-');
                 filteredOrders = filteredOrders.filter(order => {
                     const d = new Date(order.date);
-                    return d.getMonth() + 1 === parseInt(month) && d.getFullYear() === parseInt(year);
+                    return d.getMonth() + 1 === parseInt(monthNum) && d.getFullYear() === parseInt(year);
                 });
-            } else if (type === "range" && value) {
-                const [start, end] = value.split(' to ');
+                displayOrders(filteredOrders);
+            } else {
+                displayOrders(orderHistory);
+            }
+        } else if (type === "range") {
+            const start = document.getElementById("filterStart")?.value;
+            const end = document.getElementById("filterEnd")?.value;
+            if (start && end) {
                 filteredOrders = filteredOrders.filter(order => {
                     const d = new Date(order.date);
                     const startDate = new Date(start);
                     const endDate = new Date(end);
                     return d >= startDate && d <= endDate;
                 });
-            } else if (type === "daily") {
-                displayDailyReports(dailyReports);
-                return;
+                displayOrders(filteredOrders);
+            } else {
+                displayOrders(orderHistory);
             }
-            displayOrders(filteredOrders);
+        } else if (type === "daily") {
+            displayDailyReports(filteredDailyReports);
+        } else {
+            displayOrders(orderHistory);
         }
     }
 
@@ -845,7 +888,6 @@ function loadReports() {
         let filename = "report";
 
         if (type === "daily") {
-            // Export daily reports
             data = currentDailyReports.map(report => ({
                 Date: new Date(report.date).toLocaleDateString(),
                 "Total Sales": report.totalSales,
@@ -853,7 +895,6 @@ function loadReports() {
             }));
             filename = "daily_reports.xlsx";
         } else {
-            // Export order history (flatten items into rows)
             data = currentOrders.flatMap(order => {
                 const baseRow = {
                     "Bill Number": order.billNumber || "N/A",
@@ -868,7 +909,6 @@ function loadReports() {
                     "Item Price": item.price.toFixed(2),
                     "Quantity": item.qty,
                     "Item Total": (item.price * item.qty).toFixed(2),
-                    // Only include base fields in the first row of each order
                     ...(index === 0 ? {} : { "Bill Number": "", Table: "", Date: "", "Grand Total": "" })
                 }));
             });
@@ -890,34 +930,7 @@ function loadReports() {
 
     applyFilterBtn.addEventListener("click", () => {
         const type = filterType.value;
-        const value = filterValue.value;
-        let filteredOrders = [...orderHistory];
-        let filteredDailyReports = [...dailyReports];
-
-        if (type === "day" && value) {
-            filteredOrders = filteredOrders.filter(order => new Date(order.date).toLocaleDateString() === new Date(value).toLocaleDateString());
-            displayOrders(filteredOrders);
-        } else if (type === "month" && value) {
-            const [year, month] = value.split('-');
-            filteredOrders = filteredOrders.filter(order => {
-                const d = new Date(order.date);
-                return d.getMonth() + 1 === parseInt(month) && d.getFullYear() === parseInt(year);
-            });
-            displayOrders(filteredOrders);
-        } else if (type === "range" && value) {
-            const [start, end] = value.split(' to ');
-            filteredOrders = filteredOrders.filter(order => {
-                const d = new Date(order.date);
-                const startDate = new Date(start);
-                const endDate = new Date(end);
-                return d >= startDate && d <= endDate;
-            });
-            displayOrders(filteredOrders);
-        } else if (type === "daily") {
-            displayDailyReports(filteredDailyReports);
-        } else {
-            displayOrders(orderHistory);
-        }
+        applyFilter(type);
     });
 
     searchBillBtn.addEventListener("click", () => {
@@ -936,6 +949,7 @@ function loadReports() {
 
     exportExcelBtn.addEventListener("click", exportToExcel);
 }
+
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
