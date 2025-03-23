@@ -265,6 +265,7 @@ function loadMenu() {
                 <div class="menu-item">
                     ${m.code} - ${m.name} - $${m.price.toFixed(2)}
                     <button onclick="editMenuItem(${index})" class="btn btn-small btn-primary">Edit</button>
+                    <button onclick="deleteMenuItem(${index})" class="btn btn-small btn-danger">Delete</button>
                 </div>`)
             .join("");
     }
@@ -305,26 +306,24 @@ function setupMenuForm() {
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
-                // Assuming the Excel file has columns: ItemCode, ItemName, Price
                 const importedMenu = jsonData.map(row => ({
                     code: row.ItemCode || row.code || "",
                     name: row.ItemName || row.name || "",
                     price: parseFloat(row.Price || row.price) || 0
-                })).filter(item => item.code && item.name && item.price > 0); // Basic validation
+                })).filter(item => item.code && item.name && item.price > 0);
 
                 if (importedMenu.length === 0) {
                     alert("No valid menu items found in the Excel file! Ensure it has ItemCode, ItemName, and Price columns.");
                     return;
                 }
 
-                // Merge with existing menu (avoid duplicates by code)
                 const existingCodes = new Set(menu.map(item => item.code));
                 const newItems = importedMenu.filter(item => !existingCodes.has(item.code));
                 menu = [...menu, ...newItems];
                 localStorage.setItem("menu", JSON.stringify(menu));
                 loadMenu();
                 alert(`Successfully imported ${newItems.length} new menu items!`);
-                excelFileInput.value = ""; // Reset file input
+                excelFileInput.value = "";
             };
             reader.readAsArrayBuffer(file);
         });
@@ -352,6 +351,15 @@ function saveMenuEdit(index) {
     menu[index] = { code: newCode, name: newName, price: newPrice };
     localStorage.setItem("menu", JSON.stringify(menu));
     loadMenu();
+}
+
+// New function to delete a menu item
+function deleteMenuItem(index) {
+    if (confirm(`Are you sure you want to delete ${menu[index].name} from the menu?`)) {
+        menu.splice(index, 1);
+        localStorage.setItem("menu", JSON.stringify(menu));
+        loadMenu();
+    }
 }
 
 // Input Handling
