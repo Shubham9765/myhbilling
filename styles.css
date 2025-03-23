@@ -486,3 +486,25 @@ body {
 #currentTableInfo {
     padding: 10px;
 }
+.creditor-item {
+    background-color: #fff3f3; /* Light red for unpaid credits */
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.report-item h3 {
+    margin-top: 20px;
+    color: #333;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
