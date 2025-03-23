@@ -618,76 +618,198 @@ function printReceipt() {
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
 
-    const paymentMethod = prompt("Select Payment Method:\n1. Cash\n2. Online Payment\n3. Credit\nEnter 1, 2, or 3:", "1");
-    let paymentDetails = {};
-    switch (paymentMethod) {
-        case "1":
-            paymentDetails = { method: "Cash" };
-            break;
-        case "2":
-            paymentDetails = { method: "Online Payment" };
-            break;
-        case "3":
-            const creditorName = prompt("Enter Creditor Name:", "");
+    // Create payment modal
+    const modal = document.createElement("div");
+    modal.innerHTML = `
+        <div class="payment-modal-overlay">
+            <div class="payment-modal">
+                <h2>Select Payment Method</h2>
+                <div class="payment-options">
+                    <button class="payment-btn" data-method="Cash">Cash</button>
+                    <button class="payment-btn" data-method="Online Payment">Online Payment</button>
+                    <button class="payment-btn" data-method="Credit">Credit</button>
+                </div>
+                <div id="creditDetails" class="credit-details" style="display: none;">
+                    <input type="text" id="creditorName" placeholder="Creditor Name" required>
+                    <input type="text" id="creditorMobile" placeholder="Mobile (optional)">
+                </div>
+                <button id="confirmPayment" class="btn btn-primary" disabled>Confirm</button>
+                <button id="cancelPayment" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    // Modal styles (could move to styles.css)
+    const style = document.createElement("style");
+    style.textContent = `
+        .payment-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in;
+        }
+        .payment-modal {
+            background: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            animation: slideUp 0.5s ease-out;
+        }
+        .payment-modal h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .payment-options {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .payment-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .payment-btn:hover {
+            background: #2a5298;
+            color: #fff;
+            border-color: #2a5298;
+        }
+        .payment-btn.active {
+            background: #2a5298;
+            color: #fff;
+            border-color: #2a5298;
+        }
+        .credit-details {
+            margin-bottom: 20px;
+        }
+        .credit-details input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        .credit-details input:focus {
+            border-color: #2a5298;
+            outline: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Modal logic
+    let selectedMethod = null;
+    const paymentBtns = modal.querySelectorAll(".payment-btn");
+    const creditDetails = modal.querySelector("#creditDetails");
+    const confirmBtn = modal.querySelector("#confirmPayment");
+    const cancelBtn = modal.querySelector("#cancelPayment");
+    const creditorNameInput = modal.querySelector("#creditorName");
+    const creditorMobileInput = modal.querySelector("#creditorMobile");
+
+    paymentBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            paymentBtns.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            selectedMethod = btn.dataset.method;
+            creditDetails.style.display = selectedMethod === "Credit" ? "block" : "none";
+            confirmBtn.disabled = selectedMethod === "Credit" && !creditorNameInput.value.trim();
+        });
+    });
+
+    creditorNameInput.addEventListener("input", () => {
+        confirmBtn.disabled = selectedMethod === "Credit" && !creditorNameInput.value.trim();
+    });
+
+    confirmBtn.addEventListener("click", () => {
+        let paymentDetails = {};
+        if (selectedMethod === "Credit") {
+            const creditorName = creditorNameInput.value.trim();
             if (!creditorName) {
-                alert("Creditor Name is required for Credit payment!");
+                alert("Creditor Name is required!");
                 return;
             }
-            const creditorMobile = prompt("Enter Creditor Mobile Number (optional):", "");
             paymentDetails = {
                 method: "Credit",
                 creditor: {
                     name: creditorName,
-                    mobile: creditorMobile || "N/A",
+                    mobile: creditorMobileInput.value.trim() || "N/A",
                     paid: false
                 }
             };
-            break;
-        default:
-            alert("Invalid payment method! Bill not finalized.");
-            return;
-    }
+        } else {
+            paymentDetails = { method: selectedMethod };
+        }
 
-    const orderDetails = {
-        billNumber: billNumber,
-        table: currentTable,
-        items: [...currentOrder],
-        total: total.toFixed(2),
-        timestamp: timestamp,
-        date: timestamp.split('T')[0],
-        payment: paymentDetails
-    };
+        const orderDetails = {
+            billNumber: billNumber,
+            table: currentTable,
+            items: [...currentOrder],
+            total: total.toFixed(2),
+            timestamp: timestamp,
+            date: timestamp.split('T')[0],
+            payment: paymentDetails
+        };
 
-    let orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
-    orderHistory.push(orderDetails);
-    localStorage.setItem("orderHistory", JSON.stringify(orderHistory));
+        let orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
+        orderHistory.push(orderDetails);
+        localStorage.setItem("orderHistory", JSON.stringify(orderHistory));
 
-    const receipt = `
-        ${restaurantName}
-        Restaurant Billing Receipt
-        Bill Number: ${billNumber}
-        Table: ${currentTable}
-        Date: ${new Date().toLocaleString()}
-        Payment Method: ${paymentDetails.method}${paymentDetails.method === "Credit" ? ` (Creditor: ${paymentDetails.creditor.name})` : ""}
-        -----------------------
-        ${currentOrder.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join("\n")}
-        -----------------------
-        Grand Total: $${total.toFixed(2)}
-    `;
+        const receipt = `
+            ${restaurantName}
+            Restaurant Billing Receipt
+            Bill Number: ${billNumber}
+            Table: ${currentTable}
+            Date: ${new Date().toLocaleString()}
+            Payment Method: ${paymentDetails.method}${paymentDetails.method === "Credit" ? ` (Creditor: ${paymentDetails.creditor.name})` : ""}
+            -----------------------
+            ${currentOrder.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join("\n")}
+            -----------------------
+            Grand Total: $${total.toFixed(2)}
+        `;
 
-    const printWindow = window.open('', '', 'height=600,width=800');
-    printWindow.document.write('<pre>' + receipt + '</pre>');
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
+        const printWindow = window.open('', '', 'height=600,width=800');
+        printWindow.document.write('<pre>' + receipt + '</pre>');
+        printWindow.document.close();
+        printWindow.print();
+        printWindow.close();
 
-    localStorage.removeItem(`order_${currentTable}`);
-    loadOrder(currentTable);
-    const currentTableInfo = document.getElementById("currentTableInfo");
-    currentTableInfo.innerHTML = currentTable ? `
-        <p><strong>Table:</strong> ${currentTable} (Regular)</p>
-        <p><strong>Status:</strong> Free</p>
-    ` : "";
+        localStorage.removeItem(`order_${currentTable}`);
+        loadOrder(currentTable);
+        const currentTableInfo = document.getElementById("currentTableInfo");
+        currentTableInfo.innerHTML = currentTable ? `
+            <p><strong>Table:</strong> ${currentTable} (Regular)</p>
+            <p><strong>Status:</strong> Free</p>
+        ` : "";
+
+        document.body.removeChild(modal);
+    });
+
+    cancelBtn.addEventListener("click", () => {
+        document.body.removeChild(modal);
+    });
 }
 
 function closeDay() {
