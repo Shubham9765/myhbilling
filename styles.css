@@ -574,3 +574,17 @@ body {
     padding: 4px 8px;
     font-size: 12px;
 }
+#reportList {
+    padding: 10px;
+}
+
+.report-summary {
+    margin-bottom: 20px;
+}
+
+.report-item {
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
