@@ -201,7 +201,7 @@ function setupTableManagement() {
     const generateTablesBtn = document.getElementById("generateTables");
     const tableCount = document.getElementById("tableCount");
 
-    if (generateTablesBtn) {
+    if (generateTablesBtn && tableCount) {
         generateTablesBtn.addEventListener("click", () => {
             const count = parseInt(tableCount.value) || 0;
             if (count > 0) {
@@ -473,8 +473,7 @@ function setupInputs() {
     function selectItem(code) {
         const item = menu.find(m => m.code === code);
         if (item && currentTable) {
-            // Clear previous selected item highlight and append new one with styling
-            const tableInfo = currentTableInfo.innerHTML.split('<p class="selected-item">')[0]; // Keep table info only
+            const tableInfo = currentTableInfo.innerHTML.split('<p class="selected-item">')[0];
             currentTableInfo.innerHTML = tableInfo + `
                 <p class="selected-item">Selected Item: ${item.name} (${item.code}) - $${item.price.toFixed(2)}</p>
             `;
@@ -503,7 +502,6 @@ function setupInputs() {
                 currentOrder.push(item);
                 localStorage.setItem(`order_${currentTable}`, JSON.stringify(currentOrder));
                 loadOrder(currentTable);
-                // Clear the selected item after adding to order
                 currentTableInfo.innerHTML = currentTableInfo.innerHTML.replace(/<p class="selected-item">[\s\S]*?<\/p>/, "");
                 itemQty.value = "";
                 itemInput.focus();
@@ -533,6 +531,7 @@ function setupInputs() {
         }
     });
 }
+
 function updateHighlight(items) {
     items.forEach((item, index) => {
         item.classList.toggle("highlighted", index === highlightedIndex);
@@ -564,8 +563,7 @@ function loadOrder(tableName) {
                     <td>${item.qty}</td>
                     <td>${(item.price * item.qty).toFixed(2)}</td>
                     <td><button class="btn btn-danger btn-small" onclick="deleteItem('${tableName}', ${index})">Delete</button></td>
-                </tr>
-            `)
+                </tr>`)
             .join("");
         updateGrandTotal(currentOrder);
     }
@@ -620,7 +618,6 @@ function printReceipt() {
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
 
-    // Prompt for payment method
     const paymentMethod = prompt("Select Payment Method:\n1. Cash\n2. Online Payment\n3. Credit\nEnter 1, 2, or 3:", "1");
     let paymentDetails = {};
     switch (paymentMethod) {
@@ -642,7 +639,7 @@ function printReceipt() {
                 creditor: {
                     name: creditorName,
                     mobile: creditorMobile || "N/A",
-                    paid: false // Track if credit is paid
+                    paid: false
                 }
             };
             break;
@@ -743,7 +740,7 @@ function loadWaiters() {
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
-    const creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || []; // New storage for credit payments
+    const creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || [];
     const reportList = document.getElementById("reportList");
     const filterType = document.getElementById("filterType");
     const filterInputs = document.getElementById("filterInputs");
@@ -752,8 +749,10 @@ function loadReports() {
     const searchBillBtn = document.getElementById("searchBillBtn");
     const exportExcelBtn = document.getElementById("exportExcel");
 
+    // Check for required elements and provide fallback
     if (!reportList || !filterType || !filterInputs || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
         console.error("One or more report elements are missing in the DOM.");
+        if (reportList) reportList.innerHTML = "<p>Error: Required elements missing in reports.html.</p>";
         return;
     }
 
@@ -763,25 +762,31 @@ function loadReports() {
     function updateFilterInputs() {
         const type = filterType.value;
         filterInputs.innerHTML = "";
-
-        if (type === "day") {
-            filterInputs.innerHTML = `<input type="date" id="filterDay" class="filter-date">`;
-        } else if (type === "month") {
-            filterInputs.innerHTML = `<input type="month" id="filterMonth" class="filter-date">`;
-        } else if (type === "range") {
-            filterInputs.innerHTML = `
-                <input type="date" id="filterStart" class="filter-date" placeholder="Start Date">
-                <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
-            `;
-        } else if (type === "creditors") {
-            filterInputs.innerHTML = ""; // No filter inputs needed for creditors
+        switch (type) {
+            case "day":
+                filterInputs.innerHTML = `<input type="date" id="filterDay" class="filter-date">`;
+                break;
+            case "month":
+                filterInputs.innerHTML = `<input type="month" id="filterMonth" class="filter-date">`;
+                break;
+            case "range":
+                filterInputs.innerHTML = `
+                    <input type="date" id="filterStart" class="filter-date" placeholder="Start Date">
+                    <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
+                `;
+                break;
+            case "creditors":
+            case "daily":
+            case "":
+                filterInputs.innerHTML = ""; // No inputs needed
+                break;
         }
     }
 
     updateFilterInputs();
     filterType.addEventListener("change", () => {
         updateFilterInputs();
-        applyFilter(filterType.value); // Auto-apply filter on change
+        applyFilter(filterType.value);
     });
 
     function calculateSummary(orders) {
@@ -901,8 +906,7 @@ function loadReports() {
             let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
             allOrders.splice(index, 1);
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
-            const type = filterType.value;
-            applyFilter(type);
+            applyFilter(filterType.value);
         }
     }
 
@@ -938,48 +942,55 @@ function loadReports() {
         let filteredOrders = [...orderHistory];
         let filteredDailyReports = [...dailyReports];
 
-        if (type === "day") {
-            const day = document.getElementById("filterDay")?.value;
-            if (day) {
-                filteredOrders = filteredOrders.filter(order => 
-                    new Date(order.date).toISOString().split('T')[0] === day
-                );
-                displayOrders(filteredOrders);
-            } else {
+        switch (type) {
+            case "day":
+                const day = document.getElementById("filterDay")?.value;
+                if (day) {
+                    filteredOrders = filteredOrders.filter(order => 
+                        new Date(order.date).toISOString().split('T')[0] === day
+                    );
+                    displayOrders(filteredOrders);
+                } else {
+                    displayOrders(orderHistory);
+                }
+                break;
+            case "month":
+                const month = document.getElementById("filterMonth")?.value;
+                if (month) {
+                    const [year, monthNum] = month.split('-');
+                    filteredOrders = filteredOrders.filter(order => {
+                        const d = new Date(order.date);
+                        return d.getMonth() + 1 === parseInt(monthNum) && d.getFullYear() === parseInt(year);
+                    });
+                    displayOrders(filteredOrders);
+                } else {
+                    displayOrders(orderHistory);
+                }
+                break;
+            case "range":
+                const start = document.getElementById("filterStart")?.value;
+                const end = document.getElementById("filterEnd")?.value;
+                if (start && end) {
+                    filteredOrders = filteredOrders.filter(order => {
+                        const d = new Date(order.date);
+                        const startDate = new Date(start);
+                        const endDate = new Date(end);
+                        return d >= startDate && d <= endDate;
+                    });
+                    displayOrders(filteredOrders);
+                } else {
+                    displayOrders(orderHistory);
+                }
+                break;
+            case "daily":
+                displayDailyReports(filteredDailyReports);
+                break;
+            case "creditors":
+                displayCreditors();
+                break;
+            default:
                 displayOrders(orderHistory);
-            }
-        } else if (type === "month") {
-            const month = document.getElementById("filterMonth")?.value;
-            if (month) {
-                const [year, monthNum] = month.split('-');
-                filteredOrders = filteredOrders.filter(order => {
-                    const d = new Date(order.date);
-                    return d.getMonth() + 1 === parseInt(monthNum) && d.getFullYear() === parseInt(year);
-                });
-                displayOrders(filteredOrders);
-            } else {
-                displayOrders(orderHistory);
-            }
-        } else if (type === "range") {
-            const start = document.getElementById("filterStart")?.value;
-            const end = document.getElementById("filterEnd")?.value;
-            if (start && end) {
-                filteredOrders = filteredOrders.filter(order => {
-                    const d = new Date(order.date);
-                    const startDate = new Date(start);
-                    const endDate = new Date(end);
-                    return d >= startDate && d <= endDate;
-                });
-                displayOrders(filteredOrders);
-            } else {
-                displayOrders(orderHistory);
-            }
-        } else if (type === "daily") {
-            displayDailyReports(filteredDailyReports);
-        } else if (type === "creditors") {
-            displayCreditors();
-        } else {
-            displayOrders(orderHistory);
+                break;
         }
     }
 
@@ -988,48 +999,59 @@ function loadReports() {
         let data = [];
         let filename = "report";
 
-        if (type === "daily") {
-            data = currentDailyReports.map(report => ({
-                Date: new Date(report.date).toLocaleDateString(),
-                "Total Sales": report.totalSales,
-                "Items Sold": Object.entries(report.itemsSold).map(([item, qty]) => `${item} x${qty}`).join(", ")
-            }));
-            filename = "daily_reports.xlsx";
-        } else if (type === "creditors") {
-            const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
-            data = unpaidCredits.map(order => ({
-                "Bill Number": order.billNumber,
-                "Creditor Name": order.payment.creditor.name,
-                "Mobile": order.payment.creditor.mobile,
-                "Amount": order.total,
-                "Date": new Date(order.timestamp).toLocaleString()
-            }));
-            filename = "creditors.xlsx";
-        } else {
-            data = currentOrders.flatMap(order => {
-                const baseRow = {
-                    "Bill Number": order.billNumber || "N/A",
-                    Table: order.table,
-                    Date: new Date(order.timestamp).toLocaleString(),
-                    "Payment Method": order.payment.method,
-                    ...(order.payment.method === "Credit" ? {
-                        "Creditor Name": order.payment.creditor.name,
-                        "Creditor Mobile": order.payment.creditor.mobile,
-                        "Credit Paid": order.payment.creditor.paid ? "Yes" : "No"
-                    } : {}),
-                    "Grand Total": order.total
-                };
-                return order.items.map((item, index) => ({
-                    ...baseRow,
-                    "Item Name": item.name,
-                    "Item Code": item.code,
-                    "Item Price": item.price.toFixed(2),
-                    "Quantity": item.qty,
-                    "Item Total": (item.price * item.qty).toFixed(2),
-                    ...(index === 0 ? {} : { "Bill Number": "", Table: "", Date: "", "Payment Method": "", "Grand Total": "", ...(order.payment.method === "Credit" ? { "Creditor Name": "", "Creditor Mobile": "", "Credit Paid": "" } : {}) })
+        switch (type) {
+            case "daily":
+                data = currentDailyReports.map(report => ({
+                    Date: new Date(report.date).toLocaleDateString(),
+                    "Total Sales": report.totalSales,
+                    "Items Sold": Object.entries(report.itemsSold).map(([item, qty]) => `${item} x${qty}`).join(", ")
                 }));
-            });
-            filename = "order_history.xlsx";
+                filename = "daily_reports.xlsx";
+                break;
+            case "creditors":
+                const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
+                data = unpaidCredits.map(order => ({
+                    "Bill Number": order.billNumber,
+                    "Creditor Name": order.payment.creditor.name,
+                    "Mobile": order.payment.creditor.mobile,
+                    "Amount": order.total,
+                    "Date": new Date(order.timestamp).toLocaleString()
+                }));
+                filename = "creditors.xlsx";
+                break;
+            default:
+                data = currentOrders.flatMap(order => {
+                    const baseRow = {
+                        "Bill Number": order.billNumber || "N/A",
+                        Table: order.table,
+                        Date: new Date(order.timestamp).toLocaleString(),
+                        "Payment Method": order.payment.method,
+                        ...(order.payment.method === "Credit" ? {
+                            "Creditor Name": order.payment.creditor.name,
+                            "Creditor Mobile": order.payment.creditor.mobile,
+                            "Credit Paid": order.payment.creditor.paid ? "Yes" : "No"
+                        } : {}),
+                        "Grand Total": order.total
+                    };
+                    return order.items.map((item, index) => ({
+                        ...baseRow,
+                        "Item Name": item.name,
+                        "Item Code": item.code,
+                        "Item Price": item.price.toFixed(2),
+                        "Quantity": item.qty,
+                        "Item Total": (item.price * item.qty).toFixed(2),
+                        ...(index === 0 ? {} : { 
+                            "Bill Number": "", 
+                            Table: "", 
+                            Date: "", 
+                            "Payment Method": "", 
+                            "Grand Total": "", 
+                            ...(order.payment.method === "Credit" ? { "Creditor Name": "", "Creditor Mobile": "", "Credit Paid": "" } : {}) 
+                        })
+                    }));
+                });
+                filename = "order_history.xlsx";
+                break;
         }
 
         if (data.length === 0) {
@@ -1043,11 +1065,11 @@ function loadReports() {
         XLSX.writeFile(wb, filename);
     }
 
+    // Initial display
     displayOrders(orderHistory);
 
     applyFilterBtn.addEventListener("click", () => {
-        const type = filterType.value;
-        applyFilter(type);
+        applyFilter(filterType.value);
     });
 
     searchBillBtn.addEventListener("click", () => {
@@ -1070,5 +1092,5 @@ function loadReports() {
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
-    });
+    }).catch(err => console.error("Service Worker registration failed:", err));
 }
