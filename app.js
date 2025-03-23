@@ -396,7 +396,7 @@ function setupInputs() {
     });
 
     itemInput.addEventListener("input", () => {
-        const query = itemInput.value.toLowerCase();
+        const query = itemInput.value.trim().toLowerCase();
         highlightedIndex = -1;
 
         if (query && currentTable) {
@@ -422,27 +422,37 @@ function setupInputs() {
         if (e.key === "Enter") {
             e.preventDefault();
             if (highlightedIndex >= 0 && items.length > 0) {
+                // Select highlighted suggestion
                 const code = items[highlightedIndex].getAttribute("onclick").match(/'([^']+)'/)[1];
                 selectItem(code);
             } else {
-                const query = itemInput.value.toLowerCase();
+                // Direct code or name match
+                const query = itemInput.value.trim().toLowerCase();
                 const matchedItem = menu.find(item =>
                     item.code.toLowerCase() === query || item.name.toLowerCase() === query
                 );
                 if (matchedItem) {
                     selectItem(matchedItem.code);
+                } else if (items.length > 0) {
+                    // If no exact match but suggestions exist, select the first one
+                    const code = items[0].getAttribute("onclick").match(/'([^']+)'/)[1];
+                    selectItem(code);
                 } else {
                     alert("Item not found! Use arrow keys or click to select from suggestions.");
                 }
             }
         } else if (e.key === "ArrowDown") {
             e.preventDefault();
-            highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
-            updateHighlight(items);
+            if (items.length > 0) {
+                highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+                updateHighlight(items);
+            }
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
-            highlightedIndex = Math.max(highlightedIndex - 1, -1);
-            updateHighlight(items);
+            if (items.length > 0) {
+                highlightedIndex = Math.max(highlightedIndex - 1, 0); // Changed from -1 to 0 to keep selection in list
+                updateHighlight(items);
+            }
         }
     });
 
@@ -454,7 +464,7 @@ function setupInputs() {
 
     function selectItem(code) {
         const item = menu.find(m => m.code === code);
-        if (item) {
+        if (item && currentTable) {
             currentTableInfo.innerHTML += `<p>Selected Item: ${item.name} (${item.code}) - $${item.price.toFixed(2)}</p>`;
             itemInput.value = "";
             suggestions.style.display = "none";
@@ -463,6 +473,8 @@ function setupInputs() {
             if (sidebar) {
                 sidebar.classList.add("hidden");
             }
+        } else {
+            alert("Cannot select item: No table selected or item not found.");
         }
     }
 
@@ -482,6 +494,8 @@ function setupInputs() {
                 currentTableInfo.innerHTML = currentTableInfo.innerHTML.replace(/<p>Selected Item: [\w\s]+ \(\w+\) - \$[\d.]+<\/p>/, "");
                 itemQty.value = "";
                 itemInput.focus();
+            } else {
+                alert("No item selected to add quantity for!");
             }
         }
     });
