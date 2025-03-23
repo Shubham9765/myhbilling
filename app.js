@@ -473,7 +473,11 @@ function setupInputs() {
     function selectItem(code) {
         const item = menu.find(m => m.code === code);
         if (item && currentTable) {
-            currentTableInfo.innerHTML += `<p>Selected Item: ${item.name} (${item.code}) - $${item.price.toFixed(2)}</p>`;
+            // Clear previous selected item highlight and append new one with styling
+            const tableInfo = currentTableInfo.innerHTML.split('<p class="selected-item">')[0]; // Keep table info only
+            currentTableInfo.innerHTML = tableInfo + `
+                <p class="selected-item">Selected Item: ${item.name} (${item.code}) - $${item.price.toFixed(2)}</p>
+            `;
             itemInput.value = "";
             suggestions.style.display = "none";
             itemQty.focus();
@@ -499,7 +503,8 @@ function setupInputs() {
                 currentOrder.push(item);
                 localStorage.setItem(`order_${currentTable}`, JSON.stringify(currentOrder));
                 loadOrder(currentTable);
-                currentTableInfo.innerHTML = currentTableInfo.innerHTML.replace(/<p>Selected Item: [\w\s]+ \(\w+\) - \$[\d.]+<\/p>/, "");
+                // Clear the selected item after adding to order
+                currentTableInfo.innerHTML = currentTableInfo.innerHTML.replace(/<p class="selected-item">[\s\S]*?<\/p>/, "");
                 itemQty.value = "";
                 itemInput.focus();
             } else {
@@ -528,7 +533,6 @@ function setupInputs() {
         }
     });
 }
-
 function updateHighlight(items) {
     items.forEach((item, index) => {
         item.classList.toggle("highlighted", index === highlightedIndex);
