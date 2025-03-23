@@ -324,3 +324,53 @@ body {
     top: 10px;
     right: 10px;
 }
+
+.report-summary {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+    font-size: 14px;
+}
+
+.report-summary p {
+    margin: 5px 0;
+}
+
+.report-list {
+    margin-top: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.report-item {
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: #fff;
+    position: relative;
+}
+
+.btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
