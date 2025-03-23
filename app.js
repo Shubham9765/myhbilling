@@ -408,7 +408,6 @@ function setupInputs() {
             itemInput.value = "";
             suggestions.style.display = "none";
             itemQty.focus();
-            // Hide sidebar on item selection
             const sidebar = document.getElementById("sidebar");
             if (sidebar) {
                 sidebar.classList.add("hidden");
@@ -534,11 +533,10 @@ function printReceipt() {
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
 
-    // Save order details to history with debugging
     const orderDetails = {
         billNumber: billNumber,
         table: currentTable,
-        items: [...currentOrder], // Create a copy to avoid reference issues
+        items: [...currentOrder],
         total: total.toFixed(2),
         timestamp: timestamp,
         date: timestamp.split('T')[0]
@@ -569,7 +567,6 @@ function printReceipt() {
     printWindow.print();
     printWindow.close();
 
-    // Clear the current table order after printing
     localStorage.removeItem(`order_${currentTable}`);
     loadOrder(currentTable);
     const currentTableInfo = document.getElementById("currentTableInfo");
@@ -623,6 +620,11 @@ if (generateReceiptBtn) {
     });
 }
 
+// Waiters (Placeholder function)
+function loadWaiters() {
+    // Add waiter management logic here if needed
+}
+
 // Reports
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
@@ -639,7 +641,7 @@ function loadReports() {
         return;
     }
 
-    console.log("Loading orderHistory:", orderHistory); // Debug log
+    console.log("Loading orderHistory:", orderHistory);
 
     function displayOrders(orders) {
         if (orders.length === 0) {
@@ -648,13 +650,14 @@ function loadReports() {
             return;
         }
         reportList.innerHTML = orders
-            .map(order => `
+            .map((order, index) => `
                 <div class="report-item">
                     <p><strong>Bill Number:</strong> ${order.billNumber || 'N/A'}</p>
                     <p><strong>Table:</strong> ${order.table}</p>
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
                     <p><strong>Items:</strong> ${order.items.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join(", ")}</p>
                     <p><strong>Total:</strong> $${order.total}</p>
+                    <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
                     <hr>
                 </div>`)
             .join("");
@@ -678,6 +681,41 @@ function loadReports() {
                 </div>`)
             .join("");
         console.log("Daily reports displayed:", reports);
+    }
+
+    // Delete function
+    window.deleteOrder = function(index) {
+        if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+            let currentOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
+            currentOrders.splice(index, 1);
+            localStorage.setItem("orderHistory", JSON.stringify(currentOrders));
+            // Refresh the display based on current filter
+            const type = filterType.value;
+            const value = filterValue.value;
+            let filteredOrders = [...currentOrders];
+            
+            if (type === "day" && value) {
+                filteredOrders = filteredOrders.filter(order => new Date(order.date).toLocaleDateString() === new Date(value).toLocaleDateString());
+            } else if (type === "month" && value) {
+                const [year, month] = value.split('-');
+                filteredOrders = filteredOrders.filter(order => {
+                    const d = new Date(order.date);
+                    return d.getMonth() + 1 === parseInt(month) && d.getFullYear() === parseInt(year);
+                });
+            } else if (type === "range" && value) {
+                const [start, end] = value.split(' to ');
+                filteredOrders = filteredOrders.filter(order => {
+                    const d = new Date(order.date);
+                    const startDate = new Date(start);
+                    const endDate = new Date(end);
+                    return d >= startDate && d <= endDate;
+                });
+            } else if (type === "daily") {
+                displayDailyReports(dailyReports);
+                return;
+            }
+            displayOrders(filteredOrders);
+        }
     }
 
     // Initial display: show all orders
@@ -711,7 +749,7 @@ function loadReports() {
         } else if (type === "daily") {
             displayDailyReports(filteredDailyReports);
         } else {
-            displayOrders(orderHistory); // If no filter applied, show all orders
+            displayOrders(orderHistory);
         }
     });
 
