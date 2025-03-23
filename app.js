@@ -272,6 +272,9 @@ function loadMenu() {
 
 function setupMenuForm() {
     const menuForm = document.getElementById("menuForm");
+    const importExcelBtn = document.getElementById("importExcel");
+    const excelFileInput = document.getElementById("excelFile");
+
     if (menuForm) {
         menuForm.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -284,6 +287,46 @@ function setupMenuForm() {
             localStorage.setItem("menu", JSON.stringify(menu));
             loadMenu();
             menuForm.reset();
+        });
+    }
+
+    if (importExcelBtn && excelFileInput) {
+        importExcelBtn.addEventListener("click", () => {
+            const file = excelFileInput.files[0];
+            if (!file) {
+                alert("Please select an Excel file to import!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: "array" });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                // Assuming the Excel file has columns: ItemCode, ItemName, Price
+                const importedMenu = jsonData.map(row => ({
+                    code: row.ItemCode || row.code || "",
+                    name: row.ItemName || row.name || "",
+                    price: parseFloat(row.Price || row.price) || 0
+                })).filter(item => item.code && item.name && item.price > 0); // Basic validation
+
+                if (importedMenu.length === 0) {
+                    alert("No valid menu items found in the Excel file! Ensure it has ItemCode, ItemName, and Price columns.");
+                    return;
+                }
+
+                // Merge with existing menu (avoid duplicates by code)
+                const existingCodes = new Set(menu.map(item => item.code));
+                const newItems = importedMenu.filter(item => !existingCodes.has(item.code));
+                menu = [...menu, ...newItems];
+                localStorage.setItem("menu", JSON.stringify(menu));
+                loadMenu();
+                alert(`Successfully imported ${newItems.length} new menu items!`);
+                excelFileInput.value = ""; // Reset file input
+            };
+            reader.readAsArrayBuffer(file);
         });
     }
 }
@@ -494,14 +537,13 @@ function loadOrder(tableName) {
     }
 }
 
-// New function to delete an item from the order
 window.deleteItem = function(tableName, index) {
     if (confirm("Are you sure you want to delete this item from the order?")) {
         let currentOrder = JSON.parse(localStorage.getItem(`order_${tableName}`)) || [];
         currentOrder.splice(index, 1);
         localStorage.setItem(`order_${tableName}`, JSON.stringify(currentOrder));
         loadOrder(tableName);
-        loadTables(); // Update table status
+        loadTables();
     }
 }
 
@@ -522,7 +564,6 @@ function saveOrder() {
     }
 }
 
-// Generate Unique Bill Number
 function generateBillNumber() {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
@@ -620,7 +661,6 @@ function closeDay() {
     alert(`Day closed for ${today}. Total Sales: $${dailyTotal.toFixed(2)}. Reports saved.`);
 }
 
-// Generate Receipt
 const generateReceiptBtn = document.getElementById("generateReceipt");
 if (generateReceiptBtn) {
     generateReceiptBtn.addEventListener("click", () => {
@@ -632,12 +672,10 @@ if (generateReceiptBtn) {
     });
 }
 
-// Waiters (Placeholder function)
 function loadWaiters() {
     // Add waiter management logic here if needed
 }
 
-// Reports
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
@@ -819,7 +857,6 @@ function loadReports() {
     });
 }
 
-// Service Worker
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
