@@ -643,14 +643,39 @@ function loadReports() {
 
     console.log("Loading orderHistory:", orderHistory);
 
+    function calculateSummary(orders) {
+        const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
+        const totalBills = orders.length;
+        const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
+        
+        // Calculate most sold item
+        const itemQuantities = {};
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                const key = `${item.name} (${item.code})`;
+                itemQuantities[key] = (itemQuantities[key] || 0) + item.qty;
+            });
+        });
+        const mostSoldItem = Object.entries(itemQuantities).reduce((a, b) => a[1] > b[1] ? a : b, ["N/A", 0])[0];
+        
+        return { totalAmount, totalBills, avgBill, mostSoldItem };
+    }
+
     function displayOrders(orders) {
         if (orders.length === 0) {
             reportList.innerHTML = `<p>No orders found.</p>`;
             console.log("No orders to display.");
             return;
         }
-        reportList.innerHTML = orders
-            .map((order, index) => `
+        const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
+        reportList.innerHTML = `
+            <div class="report-summary">
+                <p><strong>Total Amount:</strong> $${totalAmount}</p>
+                <p><strong>Total Bills:</strong> ${totalBills}</p>
+                <p><strong>Average Bill:</strong> $${avgBill}</p>
+                <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
+            </div>
+            ${orders.map((order, index) => `
                 <div class="report-item">
                     <p><strong>Bill Number:</strong> ${order.billNumber || 'N/A'}</p>
                     <p><strong>Table:</strong> ${order.table}</p>
@@ -659,8 +684,8 @@ function loadReports() {
                     <p><strong>Total:</strong> $${order.total}</p>
                     <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
                     <hr>
-                </div>`)
-            .join("");
+                </div>`).join("")}
+        `;
         console.log("Orders displayed:", orders);
     }
 
@@ -670,16 +695,35 @@ function loadReports() {
             console.log("No daily reports to display.");
             return;
         }
-        reportList.innerHTML = reports
-            .map(report => `
+        const totalDailyAmount = reports.reduce((sum, report) => sum + parseFloat(report.totalSales), 0).toFixed(2);
+        const totalDailyReports = reports.length;
+        const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
+        
+        // Calculate most sold item across daily reports
+        const itemQuantities = {};
+        reports.forEach(report => {
+            Object.entries(report.itemsSold).forEach(([item, qty]) => {
+                itemQuantities[item] = (itemQuantities[item] || 0) + qty;
+            });
+        });
+        const mostSoldItem = Object.entries(itemQuantities).reduce((a, b) => a[1] > b[1] ? a : b, ["N/A", 0])[0];
+
+        reportList.innerHTML = `
+            <div class="report-summary">
+                <p><strong>Total Daily Sales:</strong> $${totalDailyAmount}</p>
+                <p><strong>Total Days:</strong> ${totalDailyReports}</p>
+                <p><strong>Average Daily Sales:</strong> $${avgDailySales}</p>
+                <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
+            </div>
+            ${reports.map(report => `
                 <div class="report-item">
                     <p><strong>Date:</strong> ${new Date(report.date).toLocaleDateString()}</p>
                     <p><strong>Total Sales:</strong> $${report.totalSales}</p>
                     <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold)
                         .map(([item, qty]) => `${item} x${qty}`).join(", ")}</p>
                     <hr>
-                </div>`)
-            .join("");
+                </div>`).join("")}
+        `;
         console.log("Daily reports displayed:", reports);
     }
 
@@ -689,7 +733,6 @@ function loadReports() {
             let currentOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
             currentOrders.splice(index, 1);
             localStorage.setItem("orderHistory", JSON.stringify(currentOrders));
-            // Refresh the display based on current filter
             const type = filterType.value;
             const value = filterValue.value;
             let filteredOrders = [...currentOrders];
