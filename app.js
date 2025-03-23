@@ -710,6 +710,7 @@ function loadWaiters() {
 function loadReports() {
     const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
     const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
+    const creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || []; // New storage for credit payments
     const reportList = document.getElementById("reportList");
     const filterType = document.getElementById("filterType");
     const filterInputs = document.getElementById("filterInputs");
@@ -731,29 +732,29 @@ function loadReports() {
         filterInputs.innerHTML = "";
 
         if (type === "day") {
-            filterInputs.innerHTML = `
-                <input type="date" id="filterDay" class="filter-date">
-            `;
+            filterInputs.innerHTML = `<input type="date" id="filterDay" class="filter-date">`;
         } else if (type === "month") {
-            filterInputs.innerHTML = `
-                <input type="month" id="filterMonth" class="filter-date">
-            `;
+            filterInputs.innerHTML = `<input type="month" id="filterMonth" class="filter-date">`;
         } else if (type === "range") {
             filterInputs.innerHTML = `
                 <input type="date" id="filterStart" class="filter-date" placeholder="Start Date">
                 <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
             `;
+        } else if (type === "creditors") {
+            filterInputs.innerHTML = ""; // No filter inputs needed for creditors
         }
     }
 
     updateFilterInputs();
-    filterType.addEventListener("change", updateFilterInputs);
+    filterType.addEventListener("change", () => {
+        updateFilterInputs();
+        applyFilter(filterType.value); // Auto-apply filter on change
+    });
 
     function calculateSummary(orders) {
         const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
         const totalBills = orders.length;
         const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
-        
         const itemQuantities = {};
         orders.forEach(order => {
             order.items.forEach(item => {
@@ -762,7 +763,6 @@ function loadReports() {
             });
         });
         const mostSoldItem = Object.entries(itemQuantities).reduce((a, b) => a[1] > b[1] ? a : b, ["N/A", 0])[0];
-        
         return { totalAmount, totalBills, avgBill, mostSoldItem };
     }
 
@@ -787,6 +787,7 @@ function loadReports() {
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
                     <p><strong>Items:</strong> ${order.items.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join(", ")}</p>
                     <p><strong>Total:</strong> $${order.total}</p>
+                    <p><strong>Payment Method:</strong> ${order.payment.method}${order.payment.method === "Credit" ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${order.payment.creditor.mobile}, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})` : ""}</p>
                     <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
                     <hr>
                 </div>`).join("")}
@@ -802,7 +803,6 @@ function loadReports() {
         const totalDailyAmount = reports.reduce((sum, report) => sum + parseFloat(report.totalSales), 0).toFixed(2);
         const totalDailyReports = reports.length;
         const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
-        
         const itemQuantities = {};
         reports.forEach(report => {
             Object.entries(report.itemsSold).forEach(([item, qty]) => {
@@ -829,6 +829,40 @@ function loadReports() {
         `;
     }
 
+    function displayCreditors() {
+        const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
+        if (unpaidCredits.length === 0) {
+            reportList.innerHTML = `<p>No unpaid creditors found.</p>`;
+            return;
+        }
+        const totalCreditAmount = unpaidCredits.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
+        reportList.innerHTML = `
+            <div class="report-summary">
+                <p><strong>Total Unpaid Credit Amount:</strong> $${totalCreditAmount}</p>
+                <p><strong>Total Creditors:</strong> ${unpaidCredits.length}</p>
+            </div>
+            ${unpaidCredits.map((order, index) => `
+                <div class="report-item creditor-item">
+                    <p><strong>Bill Number:</strong> ${order.billNumber}</p>
+                    <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
+                    <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
+                    <p><strong>Amount:</strong> $${order.total}</p>
+                    <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
+                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${order.billNumber}')">Add Payment</button>
+                    <hr>
+                </div>`).join("")}
+            <h3>Credit Payment History</h3>
+            ${creditPayments.length > 0 ? creditPayments.map(payment => `
+                <div class="report-item">
+                    <p><strong>Bill Number:</strong> ${payment.billNumber}</p>
+                    <p><strong>Creditor:</strong> ${payment.creditorName}</p>
+                    <p><strong>Amount:</strong> $${payment.amount}</p>
+                    <p><strong>Payment Date:</strong> ${new Date(payment.timestamp).toLocaleString()}</p>
+                    <hr>
+                </div>`).join("") : "<p>No credit payments recorded.</p>"}
+        `;
+    }
+
     window.deleteOrder = function(index) {
         if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
             let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
@@ -836,6 +870,34 @@ function loadReports() {
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
             const type = filterType.value;
             applyFilter(type);
+        }
+    }
+
+    window.markCreditPaid = function(billNumber) {
+        let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
+        const orderIndex = allOrders.findIndex(o => o.billNumber === billNumber);
+        if (orderIndex === -1) return;
+
+        const order = allOrders[orderIndex];
+        if (order.payment.method !== "Credit" || order.payment.creditor.paid) {
+            alert("This order is not an unpaid credit!");
+            return;
+        }
+
+        if (confirm(`Mark credit payment of $${order.total} for ${order.payment.creditor.name} as paid?`)) {
+            order.payment.creditor.paid = true;
+            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
+
+            let creditPayments = JSON.parse(localStorage.getItem("creditPayments")) || [];
+            creditPayments.push({
+                billNumber: billNumber,
+                creditorName: order.payment.creditor.name,
+                amount: order.total,
+                timestamp: new Date().toISOString()
+            });
+            localStorage.setItem("creditPayments", JSON.stringify(creditPayments));
+
+            displayCreditors();
         }
     }
 
@@ -881,6 +943,8 @@ function loadReports() {
             }
         } else if (type === "daily") {
             displayDailyReports(filteredDailyReports);
+        } else if (type === "creditors") {
+            displayCreditors();
         } else {
             displayOrders(orderHistory);
         }
@@ -898,12 +962,28 @@ function loadReports() {
                 "Items Sold": Object.entries(report.itemsSold).map(([item, qty]) => `${item} x${qty}`).join(", ")
             }));
             filename = "daily_reports.xlsx";
+        } else if (type === "creditors") {
+            const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
+            data = unpaidCredits.map(order => ({
+                "Bill Number": order.billNumber,
+                "Creditor Name": order.payment.creditor.name,
+                "Mobile": order.payment.creditor.mobile,
+                "Amount": order.total,
+                "Date": new Date(order.timestamp).toLocaleString()
+            }));
+            filename = "creditors.xlsx";
         } else {
             data = currentOrders.flatMap(order => {
                 const baseRow = {
                     "Bill Number": order.billNumber || "N/A",
                     Table: order.table,
                     Date: new Date(order.timestamp).toLocaleString(),
+                    "Payment Method": order.payment.method,
+                    ...(order.payment.method === "Credit" ? {
+                        "Creditor Name": order.payment.creditor.name,
+                        "Creditor Mobile": order.payment.creditor.mobile,
+                        "Credit Paid": order.payment.creditor.paid ? "Yes" : "No"
+                    } : {}),
                     "Grand Total": order.total
                 };
                 return order.items.map((item, index) => ({
@@ -913,7 +993,7 @@ function loadReports() {
                     "Item Price": item.price.toFixed(2),
                     "Quantity": item.qty,
                     "Item Total": (item.price * item.qty).toFixed(2),
-                    ...(index === 0 ? {} : { "Bill Number": "", Table: "", Date: "", "Grand Total": "" })
+                    ...(index === 0 ? {} : { "Bill Number": "", Table: "", Date: "", "Payment Method": "", "Grand Total": "", ...(order.payment.method === "Credit" ? { "Creditor Name": "", "Creditor Mobile": "", "Credit Paid": "" } : {}) })
                 }));
             });
             filename = "order_history.xlsx";
