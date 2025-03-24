@@ -52,20 +52,21 @@ function updateTimer() {
     document.getElementById("timer").textContent = `${hours}h ${minutes}m ${seconds}s`;
 }
 
-if (window.location.pathname.includes("dashboard.html") || window.location.pathname.includes("tables.html") || window.location.pathname.includes("menu.html") || window.location.pathname.includes("reports.html")) {
-    if (!checkSession()) return;
+function initializeSessionDependentFeatures() {
+    if (window.location.pathname.includes("dashboard.html") || window.location.pathname.includes("tables.html") || window.location.pathname.includes("menu.html") || window.location.pathname.includes("reports.html")) {
+        if (!checkSession()) return;
 
-    document.getElementById("user").textContent = localStorage.getItem("loggedInUser");
-    setInterval(updateTimer, 1000);
-    updateTimer();
+        document.getElementById("user").textContent = localStorage.getItem("loggedInUser");
+        setInterval(updateTimer, 1000);
+        updateTimer();
 
-    document.getElementById("logoutBtn").addEventListener("click", () => {
-        localStorage.removeItem("loggedInUser");
-        localStorage.removeItem("loginTime");
-        window.location.href = "index.html";
-    });
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            localStorage.removeItem("loggedInUser");
+            localStorage.removeItem("loginTime");
+            window.location.href = "index.html";
+        });
+    }
 }
-
 // Dashboard Functionality
 let currentTable = null;
 
