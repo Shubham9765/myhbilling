@@ -942,54 +942,73 @@ function loadReports() {
     function displayOrders(orders) {
         currentOrders = orders;
         if (orders.length === 0) {
-            reportList.innerHTML = `<p>No orders found.</p>`;
+            reportList.innerHTML = `<div class="no-data">No orders found.</div>`;
             return;
         }
         const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
         reportList.innerHTML = `
-            <div class="report-summary">
-                <p><strong>Total Amount:</strong> $${totalAmount}</p>
-                <p><strong>Total Bills:</strong> ${totalBills}</p>
-                <p><strong>Average Bill:</strong> $${avgBill}</p>
-                <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
+            <div class="report-summary modern-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Total Amount</span>
+                    <span class="summary-value">$${totalAmount}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Bills</span>
+                    <span class="summary-value">${totalBills}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Average Bill</span>
+                    <span class="summary-value">$${avgBill}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Most Sold Item</span>
+                    <span class="summary-value">${mostSoldItem}</span>
+                </div>
             </div>
-            ${orders
-                .map(
-                    (order, index) => `
-                <div class="report-item">
-                    <p><strong>Bill Number:</strong> ${order.billNumber || "N/A"}</p>
-                    <p><strong>Table:</strong> ${order.table}</p>
-                    <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-                    <p><strong>Items:</strong> ${order.items
-                        .map(
-                            (item) =>
-                                `${item.name} (${item.code}) x${item.qty} - $${(
-                                    item.price * item.qty
-                                ).toFixed(2)}`
-                        )
-                        .join(", ")}</p>
-                    <p><strong>Total:</strong> $${order.total}</p>
-                    <p><strong>Payment Method:</strong> ${
-                        order.payment.method
-                    }${
-                        order.payment.method === "Credit"
-                            ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
-                                  order.payment.creditor.mobile
-                              }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
-                            : ""
-                    }</p>
-                    <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
-                    <hr>
-                </div>`
-                )
-                .join("")}
+            <div class="report-grid">
+                ${orders
+                    .map(
+                        (order, index) => `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <span class="report-title">Bill Number: ${order.billNumber || "N/A"}</span>
+                            <span class="report-date">${new Date(order.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div class="report-body">
+                            <p><strong>Table:</strong> ${order.table}</p>
+                            <p><strong>Items:</strong> ${order.items
+                                .map(
+                                    (item) =>
+                                        `${item.name} (${item.code}) x${item.qty} - $${(
+                                            item.price * item.qty
+                                        ).toFixed(2)}`
+                                )
+                                .join(", ")}</p>
+                            <p><strong>Total:</strong> $${order.total}</p>
+                            <p><strong>Payment Method:</strong> ${
+                                order.payment.method
+                            }${
+                                order.payment.method === "Credit"
+                                    ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
+                                          order.payment.creditor.mobile
+                                      }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
+                                    : ""
+                            }</p>
+                        </div>
+                        <div class="report-footer">
+                            <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
+                        </div>
+                    </div>`
+                    )
+                    .join("")}
+            </div>
         `;
     }
 
     function displayDailyReports(reports) {
         currentDailyReports = reports;
         if (reports.length === 0) {
-            reportList.innerHTML = `<p>No daily reports found.</p>`;
+            reportList.innerHTML = `<div class="no-data">No daily reports found.</div>`;
             return;
         }
         const totalDailyAmount = reports
@@ -1010,25 +1029,44 @@ function loadReports() {
         )[0];
 
         reportList.innerHTML = `
-            <div class="report-summary">
-                <p><strong>Total Daily Sales:</strong> $${totalDailyAmount}</p>
-                <p><strong>Total Days:</strong> ${totalDailyReports}</p>
-                <p><strong>Average Daily Sales:</strong> $${avgDailySales}</p>
-                <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
+            <div class="report-summary modern-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Total Daily Sales</span>
+                    <span class="summary-value">$${totalDailyAmount}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Days</span>
+                    <span class="summary-value">${totalDailyReports}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Average Daily Sales</span>
+                    <span class="summary-value">$${avgDailySales}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Most Sold Item</span>
+                    <span class="summary-value">${mostSoldItem}</span>
+                </div>
             </div>
-            ${reports
-                .map(
-                    (report) => `
-                <div class="report-item">
-                    <p><strong>Date:</strong> ${new Date(report.date).toLocaleDateString()}</p>
-                    <p><strong>Total Sales:</strong> $${report.totalSales}</p>
-                    <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold)
-                        .map(([item, qty]) => `${item} x${qty}`)
-                        .join(", ")}</p>
-                    <hr>
-                </div>`
-                )
-                .join("")}
+            <div class="report-grid">
+                ${reports
+                    .map(
+                        (report) => `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <span class="report-title">Date: ${new Date(
+                                report.date
+                            ).toLocaleDateString()}</span>
+                        </div>
+                        <div class="report-body">
+                            <p><strong>Total Sales:</strong> $${report.totalSales}</p>
+                            <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold)
+                                .map(([item, qty]) => `${item} x${qty}`)
+                                .join(", ")}</p>
+                        </div>
+                    </div>`
+                    )
+                    .join("")}
+            </div>
         `;
     }
 
@@ -1040,7 +1078,7 @@ function loadReports() {
             (order) => order.payment.method === "Credit" && order.payment.creditor.paid
         );
         if (unpaidCredits.length === 0 && paidCredits.length === 0) {
-            reportList.innerHTML = `<p>No creditor records found.</p>`;
+            reportList.innerHTML = `<div class="no-data">No creditor records found.</div>`;
             return;
         }
 
@@ -1071,66 +1109,87 @@ function loadReports() {
         );
 
         reportList.innerHTML = `
-            <div class="report-summary">
-                <p><strong>Total Unpaid Amount:</strong> $${totalUnpaidAmount}</p>
-                <p><strong>Total Unpaid Creditors:</strong> ${unpaidCredits.length}</p>
-                <p><strong>Total Paid Amount:</strong> $${totalPaidAmount}</p>
+            <div class="report-summary modern-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Total Unpaid Amount</span>
+                    <span class="summary-value">$${totalUnpaidAmount}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Unpaid Creditors</span>
+                    <span class="summary-value">${unpaidCredits.length}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Paid Amount</span>
+                    <span class="summary-value">$${totalPaidAmount}</span>
+                </div>
             </div>
-            <h3>Unpaid Credits</h3>
+            <h3 class="section-title">Unpaid Credits</h3>
             <div class="creditor-search">
                 <input type="text" id="creditorSearch" placeholder="Search by Creditor Name" value="${creditorSearchQuery}">
             </div>
-            ${
-                filteredUnpaidCredits.length > 0
-                    ? filteredUnpaidCredits
-                          .map(
-                              (order, index) => `
-                <div class="report-item creditor-item">
-                    <p><strong>Bill Number:</strong> ${order.billNumber}</p>
-                    <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
-                    <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
-                    <p><strong>Total Amount:</strong> $${order.total}</p>
-                    <p><strong>Remaining Amount:</strong> $${
-                        order.payment.creditor.remainingAmount || order.total
-                    }</p>
-                    <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${
-                        order.billNumber
-                    }')">Mark Paid</button>
-                    <hr>
-                </div>`
-                          )
-                          .join("")
-                    : "<p>No unpaid credits matching the search.</p>"
-            }
-            <h3>Credit Payment History</h3>
-            ${
-                paidCredits.length > 0
-                    ? paidCredits
-                          .map(
-                              (order) => `
-                <div class="report-item">
-                    <p><strong>Bill Number:</strong> ${order.billNumber}</p>
-                    <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
-                    <p><strong>Total Amount:</strong> $${order.total}</p>
-                    <p><strong>Payments:</strong></p>
-                    <ul>
-                        ${order.payment.creditor.paymentHistory
-                            .map(
-                                (payment) => `
-                            <li>$${payment.amount} on ${new Date(
-                                payment.timestamp
-                            ).toLocaleString()}</li>
-                        `
-                            )
-                            .join("")}
-                    </ul>
-                    <hr>
-                </div>`
-                          )
-                          .join("")
-                    : "<p>No credit payments recorded.</p>"
-            }
+            <div class="report-grid">
+                ${
+                    filteredUnpaidCredits.length > 0
+                        ? filteredUnpaidCredits
+                              .map(
+                                  (order) => `
+                    <div class="report-card creditor-card">
+                        <div class="report-header">
+                            <span class="report-title">Bill Number: ${order.billNumber}</span>
+                            <span class="report-date">${new Date(order.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div class="report-body">
+                            <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
+                            <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
+                            <p><strong>Total Amount:</strong> $${order.total}</p>
+                            <p><strong>Remaining Amount:</strong> $${
+                                order.payment.creditor.remainingAmount || order.total
+                            }</p>
+                        </div>
+                        <div class="report-footer">
+                            <button class="btn btn-success btn-small" onclick="markCreditPaid('${
+                                order.billNumber
+                            }')">Mark Paid</button>
+                        </div>
+                    </div>`
+                              )
+                              .join("")
+                        : "<div class='no-data'>No unpaid credits matching the search.</div>"
+                }
+            </div>
+            <h3 class="section-title">Credit Payment History</h3>
+            <div class="report-grid">
+                ${
+                    paidCredits.length > 0
+                        ? paidCredits
+                              .map(
+                                  (order) => `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <span class="report-title">Bill Number: ${order.billNumber}</span>
+                        </div>
+                        <div class="report-body">
+                            <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
+                            <p><strong>Total Amount:</strong> $${order.total}</p>
+                            <p><strong>Payments:</strong></p>
+                            <ul>
+                                ${order.payment.creditor.paymentHistory
+                                    .map(
+                                        (payment) => `
+                                    <li>$${payment.amount} on ${new Date(
+                                        payment.timestamp
+                                    ).toLocaleString()}</li>
+                                `
+                                    )
+                                    .join("")}
+                            </ul>
+                        </div>
+                    </div>`
+                              )
+                              .join("")
+                        : "<div class='no-data'>No credit payments recorded.</div>"
+                }
+            </div>
         `;
 
         // Add event listener for the creditor search input
@@ -1187,9 +1246,10 @@ function loadReports() {
         `;
         document.body.appendChild(modal);
 
-        // Add CSS for the modal
+        // Add CSS for the modal and report page
         const style = document.createElement("style");
         style.textContent = `
+            /* Modal Styles */
             .payment-modal-overlay {
                 position: fixed;
                 top: 0;
@@ -1216,6 +1276,7 @@ function loadReports() {
             .payment-modal h2 {
                 margin-bottom: 20px;
                 color: #333;
+                font-size: 1.5em;
             }
             .payment-modal p {
                 margin: 5px 0;
@@ -1273,6 +1334,128 @@ function loadReports() {
                 from { transform: translateY(50px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
             }
+
+            /* Report Page Styles */
+            .modern-summary {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 30px;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            }
+            .summary-item {
+                background: #fff;
+                padding: 15px;
+                border-radius: 8px;
+                text-align: center;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                transition: transform 0.2s ease;
+            }
+            .summary-item:hover {
+                transform: translateY(-3px);
+            }
+            .summary-label {
+                display: block;
+                font-size: 0.9em;
+                color: #666;
+                margin-bottom: 5px;
+            }
+            .summary-value {
+                font-size: 1.2em;
+                font-weight: bold;
+                color: #333;
+            }
+            .report-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 20px;
+            }
+            .report-card {
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+                transition: transform 0.2s ease, box-shadow 0.2s ease;
+            }
+            .report-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            }
+            .report-header {
+                background: #007bff;
+                color: #fff;
+                padding: 15px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .report-title {
+                font-size: 1.1em;
+                font-weight: bold;
+            }
+            .report-date {
+                font-size: 0.9em;
+                opacity: 0.8;
+            }
+            .report-body {
+                padding: 15px;
+                color: #333;
+            }
+            .report-body p {
+                margin: 8px 0;
+                font-size: 0.95em;
+            }
+            .report-body ul {
+                margin: 8px 0;
+                padding-left: 20px;
+            }
+            .report-body li {
+                margin: 5px 0;
+                font-size: 0.9em;
+            }
+            .report-footer {
+                padding: 10px 15px;
+                border-top: 1px solid #eee;
+                text-align: right;
+            }
+            .btn-small {
+                padding: 8px 12px;
+                font-size: 0.9em;
+                border-radius: 6px;
+                transition: background 0.3s ease;
+            }
+            .btn-danger {
+                background: #dc3545;
+                color: #fff;
+            }
+            .btn-danger:hover {
+                background: #c82333;
+            }
+            .btn-success {
+                background: #28a745;
+                color: #fff;
+            }
+            .btn-success:hover {
+                background: #218838;
+            }
+            .section-title {
+                font-size: 1.5em;
+                color: #333;
+                margin: 30px 0 15px;
+                border-bottom: 2px solid #007bff;
+                padding-bottom: 5px;
+            }
+            .no-data {
+                text-align: center;
+                color: #666;
+                font-size: 1.1em;
+                padding: 20px;
+                background: #f8f9fa;
+                border-radius: 8px;
+            }
             .creditor-search {
                 margin-bottom: 20px;
             }
@@ -1283,10 +1466,14 @@ function loadReports() {
                 border: 2px solid #ddd;
                 border-radius: 8px;
                 font-size: 1em;
+                transition: border-color 0.3s ease;
             }
             .creditor-search input:focus {
                 border-color: #007bff;
                 outline: none;
+            }
+            .creditor-card .report-header {
+                background: #dc3545;
             }
         `;
         document.head.appendChild(style);
@@ -1339,10 +1526,16 @@ function loadReports() {
                 order.payment.creditor.paid = true;
             }
 
-            // Save updated orderHistory
+            // Save updated orderHistory to localStorage
             allOrders[orderIndex] = order;
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
-            displayCreditors(); // Refresh display
+
+            // Update the orderHistory variable to reflect the changes
+            orderHistory.length = 0;
+            orderHistory.push(...allOrders);
+
+            // Refresh the display with updated data
+            displayCreditors();
             document.body.removeChild(modal);
         });
 
