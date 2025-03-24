@@ -982,6 +982,9 @@ function loadReports() {
             padding: 10px 15px;
             border-top: 1px solid #eee;
             text-align: right;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
         }
         .btn-small {
             padding: 8px 12px;
@@ -1002,6 +1005,13 @@ function loadReports() {
         }
         .btn-success:hover {
             background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
         }
         .section-title {
             font-size: 1.5em;
@@ -1148,6 +1158,9 @@ function loadReports() {
                             }</p>
                         </div>
                         <div class="report-footer">
+                            <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
+                                order.billNumber
+                            }', ${index})">Edit Payment Method</button>
                             <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
                         </div>
                     </div>`
@@ -1299,6 +1312,9 @@ function loadReports() {
                             }</p>
                         </div>
                         <div class="report-footer">
+                            <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
+                                order.billNumber
+                            }')">Edit Payment Method</button>
                             <button class="btn btn-success btn-small" onclick="markCreditPaid('${
                                 order.billNumber
                             }')">Mark Paid</button>
@@ -1335,6 +1351,11 @@ function loadReports() {
                                     )
                                     .join("")}
                             </ul>
+                        </div>
+                        <div class="report-footer">
+                            <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
+                                order.billNumber
+                            }')">Edit Payment Method</button>
                         </div>
                     </div>`
                               )
@@ -1398,7 +1419,7 @@ function loadReports() {
         `;
         document.body.appendChild(modal);
 
-        // Add CSS for the modal only (report page styles are already applied)
+        // Add CSS for the modal only
         const modalStyle = document.createElement("style");
         modalStyle.textContent = `
             /* Modal Styles */
@@ -1446,6 +1467,46 @@ function loadReports() {
                 transition: border-color 0.3s ease;
             }
             .payment-input input:focus {
+                border-color: #007bff;
+                outline: none;
+            }
+            .payment-method-options {
+                margin: 20px 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            .payment-method-btn {
+                padding: 10px 20px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                background: #f8f9fa;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .payment-method-btn.selected {
+                background: #007bff;
+                color: #fff;
+                border-color: #007bff;
+            }
+            .payment-method-btn:hover {
+                background: #e9ecef;
+            }
+            .creditor-details {
+                margin: 20px 0;
+                display: none;
+            }
+            .creditor-details input {
+                width: 100%;
+                padding: 10px;
+                margin: 5px 0;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 1em;
+                transition: border-color 0.3s ease;
+            }
+            .creditor-details input:focus {
                 border-color: #007bff;
                 outline: none;
             }
@@ -1555,6 +1616,248 @@ function loadReports() {
         });
     };
 
+    window.editPaymentMethod = function (billNumber, orderIndex) {
+        let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
+        const order = allOrders.find((o) => o.billNumber === billNumber);
+        if (!order) {
+            alert("Order not found!");
+            return;
+        }
+
+        // Create a polished modal for editing the payment method
+        const modal = document.createElement("div");
+        modal.innerHTML = `
+            <div class="payment-modal-overlay">
+                <div class="payment-modal">
+                    <h2>Edit Payment Method</h2>
+                    <p><strong>Bill Number:</strong> ${billNumber}</p>
+                    <p><strong>Current Method:</strong> ${
+                        order.payment.method
+                    }${
+                        order.payment.method === "Credit"
+                            ? ` (Creditor: ${order.payment.creditor.name})`
+                            : ""
+                    }</p>
+                    <p><strong>Total Amount:</strong> $${order.total}</p>
+                    <div class="payment-method-options">
+                        <button class="payment-method-btn" data-method="Cash">Cash</button>
+                        <button class="payment-method-btn" data-method="Card">Card</button>
+                        <button class="payment-method-btn" data-method="UPI">UPI</button>
+                        <button class="payment-method-btn" data-method="Credit">Credit</button>
+                    </div>
+                    <div class="creditor-details" id="creditorDetails">
+                        <input type="text" id="creditorName" placeholder="Creditor Name">
+                        <input type="text" id="creditorMobile" placeholder="Creditor Mobile (Optional)">
+                    </div>
+                    <button id="confirmEditPayment" class="btn btn-primary" disabled>Confirm Change</button>
+                    <button id="cancelEditPayment" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // Reuse the modal styles already defined in markCreditPaid
+        const modalStyle = document.createElement("style");
+        modalStyle.textContent = `
+            /* Modal Styles (reused) */
+            .payment-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease-in;
+            }
+            .payment-modal {
+                background: #fff;
+                padding: 30px;
+                border-radius: 15看看px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                width: 100%;
+                max-width: 400px;
+                text-align: center;
+                animation: slideUp 0.5s ease-out;
+            }
+            .payment-modal h2 {
+                margin-bottom: 20px;
+                color: #333;
+                font-size: 1.5em;
+            }
+            .payment-modal p {
+                margin: 5px 0;
+                color: #555;
+            }
+            .payment-method-options {
+                margin: 20px 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                justify-content: center;
+            }
+            .payment-method-btn {
+                padding: 10px 20px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                background: #f8f9fa;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            .payment-method-btn.selected {
+                background: #007bff;
+                color: #fff;
+                border-color: #007bff;
+            }
+            .payment-method-btn:hover {
+                background: #e9ecef;
+            }
+            .creditor-details {
+                margin: 20px 0;
+                display: none;
+            }
+            .creditor-details input {
+                width: 100%;
+                padding: 10px;
+                margin: 5px 0;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 1em;
+                transition: border-color 0.3s ease;
+            }
+            .creditor-details input:focus {
+                border-color: #007bff;
+                outline: none;
+            }
+            .btn-primary {
+                background: #007bff;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+            .btn-primary:hover {
+                background: #0056b3;
+            }
+            .btn-primary:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+            .btn-secondary {
+                background: #6c757d;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                margin-left: 10px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+            .btn-secondary:hover {
+                background: #5a6268;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(modalStyle);
+
+        const paymentMethodButtons = modal.querySelectorAll(".payment-method-btn");
+        const creditorDetails = modal.querySelector("#creditorDetails");
+        const creditorNameInput = modal.querySelector("#creditorName");
+        const creditorMobileInput = modal.querySelector("#creditorMobile");
+        const confirmBtn = modal.querySelector("#confirmEditPayment");
+        const cancelBtn = modal.querySelector("#cancelEditPayment");
+
+        let selectedMethod = null;
+
+        // Handle payment method selection
+        paymentMethodButtons.forEach((btn) => {
+            btn.addEventListener("click", () => {
+                paymentMethodButtons.forEach((b) => b.classList.remove("selected"));
+                btn.classList.add("selected");
+                selectedMethod = btn.getAttribute("data-method");
+
+                // Show creditor details if Credit is selected
+                if (selectedMethod === "Credit") {
+                    creditorDetails.style.display = "block";
+                    confirmBtn.disabled = !creditorNameInput.value.trim();
+                } else {
+                    creditorDetails.style.display = "none";
+                    confirmBtn.disabled = false;
+                }
+            });
+        });
+
+        // Enable/disable confirm button based on creditor name input
+        creditorNameInput.addEventListener("input", () => {
+            confirmBtn.disabled = !creditorNameInput.value.trim();
+        });
+
+        confirmBtn.addEventListener("click", () => {
+            if (!selectedMethod) {
+                alert("Please select a payment method!");
+                return;
+            }
+
+            if (selectedMethod === "Credit" && !creditorNameInput.value.trim()) {
+                alert("Please enter the creditor's name!");
+                return;
+            }
+
+            if (
+                !confirm(
+                    `Are you sure you want to change the payment method to ${selectedMethod} for Bill ${billNumber}?`
+                )
+            ) {
+                return;
+            }
+
+            // Update the payment method
+            order.payment.method = selectedMethod;
+            if (selectedMethod === "Credit") {
+                order.payment.creditor = {
+                    name: creditorNameInput.value.trim(),
+                    mobile: creditorMobileInput.value.trim() || "N/A",
+                    paid: false,
+                    remainingAmount: order.total,
+                    paymentHistory: [],
+                };
+            } else {
+                delete order.payment.creditor; // Remove creditor details if switching to non-Credit method
+            }
+
+            // Save updated orderHistory to localStorage
+            const orderIndexInAllOrders = allOrders.findIndex((o) => o.billNumber === billNumber);
+            if (orderIndexInAllOrders !== -1) {
+                allOrders[orderIndexInAllOrders] = order;
+                localStorage.setItem("orderHistory", JSON.stringify(allOrders));
+
+                // Update the orderHistory variable to reflect the changes
+                orderHistory.length = 0;
+                orderHistory.push(...allOrders);
+            }
+
+            // Refresh the display based on the current filter
+            applyFilter(filterType.value);
+            document.body.removeChild(modal);
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            document.body.removeChild(modal);
+        });
+    };
+
     function applyFilter(type) {
         let filteredOrders = [...orderHistory];
         let filteredDailyReports = [...dailyReports];
@@ -1634,12 +1937,12 @@ function loadReports() {
                 data = allCredits.map((order) => ({
                     "Bill Number": order.billNumber,
                     "Creditor Name": order.payment.creditor.name,
-                    Mobile: order.payment.creditor.mobile,
+                    "Mobile": order.payment.creditor.mobile,
                     "Total Amount": order.total,
                     "Remaining Amount": order.payment.creditor.paid
                         ? "0.00"
                         : order.payment.creditor.remainingAmount || order.total,
-                    Paid: order.payment.creditor.paid ? "Yes" : "No",
+                    "Paid": order.payment.creditor.paid ? "Yes" : "No",
                     "Payment History": order.payment.creditor.paymentHistory
                         ? order.payment.creditor.paymentHistory
                               .map(
@@ -1648,7 +1951,7 @@ function loadReports() {
                               )
                               .join("; ")
                         : "N/A",
-                    Date: new Date(order.timestamp).toLocaleString(),
+                    "Date": new Date(order.timestamp).toLocaleString(),
                 }));
                 filename = "creditors.xlsx";
                 break;
@@ -1656,8 +1959,8 @@ function loadReports() {
                 data = currentOrders.flatMap((order) => {
                     const baseRow = {
                         "Bill Number": order.billNumber || "N/A",
-                        Table: order.table,
-                        Date: new Date(order.timestamp).toLocaleString(),
+                        "Table": order.table,
+                        "Date": new Date(order.timestamp).toLocaleString(),
                         "Payment Method": order.payment.method,
                         ...(order.payment.method === "Credit"
                             ? {
@@ -1673,14 +1976,14 @@ function loadReports() {
                         "Item Name": item.name,
                         "Item Code": item.code,
                         "Item Price": item.price.toFixed(2),
-                        Quantity: item.qty,
+                        "Quantity": item.qty,
                         "Item Total": (item.price * item.qty).toFixed(2),
                         ...(index === 0
                             ? {}
                             : {
                                   "Bill Number": "",
-                                  Table: "",
-                                  Date: "",
+                                  "Table": "",
+                                  "Date": "",
                                   "Payment Method": "",
                                   "Grand Total": "",
                                   ...(order.payment.method === "Credit"
