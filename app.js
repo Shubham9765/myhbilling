@@ -869,7 +869,15 @@ function loadReports() {
     const searchBillBtn = document.getElementById("searchBillBtn");
     const exportExcelBtn = document.getElementById("exportExcel");
 
-    if (!reportList || !filterType || !filterInputs || !applyFilterBtn || !searchBillInput || !searchBillBtn || !exportExcelBtn) {
+    if (
+        !reportList ||
+        !filterType ||
+        !filterInputs ||
+        !applyFilterBtn ||
+        !searchBillInput ||
+        !searchBillBtn ||
+        !exportExcelBtn
+    ) {
         console.error("Missing elements:", {
             reportList: !!reportList,
             filterType: !!filterType,
@@ -877,14 +885,17 @@ function loadReports() {
             applyFilterBtn: !!applyFilterBtn,
             searchBillInput: !!searchBillInput,
             searchBillBtn: !!searchBillBtn,
-            exportExcelBtn: !!exportExcelBtn
+            exportExcelBtn: !!exportExcelBtn,
         });
-        if (reportList) reportList.innerHTML = "<p>Error: Required elements missing in reports.html. Check console for details.</p>";
+        if (reportList)
+            reportList.innerHTML =
+                "<p>Error: Required elements missing in reports.html. Check console for details.</p>";
         return;
     }
 
     let currentOrders = [...orderHistory];
     let currentDailyReports = [...dailyReports];
+    let creditorSearchQuery = ""; // To store the search query for creditors
 
     function updateFilterInputs() {
         const type = filterType.value;
@@ -909,17 +920,22 @@ function loadReports() {
     }
 
     function calculateSummary(orders) {
-        const totalAmount = orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2);
+        const totalAmount = orders
+            .reduce((sum, order) => sum + parseFloat(order.total), 0)
+            .toFixed(2);
         const totalBills = orders.length;
         const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
         const itemQuantities = {};
-        orders.forEach(order => {
-            order.items.forEach(item => {
+        orders.forEach((order) => {
+            order.items.forEach((item) => {
                 const key = `${item.name} (${item.code})`;
                 itemQuantities[key] = (itemQuantities[key] || 0) + item.qty;
             });
         });
-        const mostSoldItem = Object.entries(itemQuantities).reduce((a, b) => a[1] > b[1] ? a : b, ["N/A", 0])[0];
+        const mostSoldItem = Object.entries(itemQuantities).reduce(
+            (a, b) => (a[1] > b[1] ? a : b),
+            ["N/A", 0]
+        )[0];
         return { totalAmount, totalBills, avgBill, mostSoldItem };
     }
 
@@ -937,17 +953,36 @@ function loadReports() {
                 <p><strong>Average Bill:</strong> $${avgBill}</p>
                 <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
             </div>
-            ${orders.map((order, index) => `
+            ${orders
+                .map(
+                    (order, index) => `
                 <div class="report-item">
-                    <p><strong>Bill Number:</strong> ${order.billNumber || 'N/A'}</p>
+                    <p><strong>Bill Number:</strong> ${order.billNumber || "N/A"}</p>
                     <p><strong>Table:</strong> ${order.table}</p>
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-                    <p><strong>Items:</strong> ${order.items.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join(", ")}</p>
+                    <p><strong>Items:</strong> ${order.items
+                        .map(
+                            (item) =>
+                                `${item.name} (${item.code}) x${item.qty} - $${(
+                                    item.price * item.qty
+                                ).toFixed(2)}`
+                        )
+                        .join(", ")}</p>
                     <p><strong>Total:</strong> $${order.total}</p>
-                    <p><strong>Payment Method:</strong> ${order.payment.method}${order.payment.method === "Credit" ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${order.payment.creditor.mobile}, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})` : ""}</p>
+                    <p><strong>Payment Method:</strong> ${
+                        order.payment.method
+                    }${
+                        order.payment.method === "Credit"
+                            ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
+                                  order.payment.creditor.mobile
+                              }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
+                            : ""
+                    }</p>
                     <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
                     <hr>
-                </div>`).join("")}
+                </div>`
+                )
+                .join("")}
         `;
     }
 
@@ -957,16 +992,22 @@ function loadReports() {
             reportList.innerHTML = `<p>No daily reports found.</p>`;
             return;
         }
-        const totalDailyAmount = reports.reduce((sum, report) => sum + parseFloat(report.totalSales), 0).toFixed(2);
+        const totalDailyAmount = reports
+            .reduce((sum, report) => sum + parseFloat(report.totalSales), 0)
+            .toFixed(2);
         const totalDailyReports = reports.length;
-        const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
+        const avgDailySales =
+            totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
         const itemQuantities = {};
-        reports.forEach(report => {
+        reports.forEach((report) => {
             Object.entries(report.itemsSold).forEach(([item, qty]) => {
                 itemQuantities[item] = (itemQuantities[item] || 0) + qty;
             });
         });
-        const mostSoldItem = Object.entries(itemQuantities).reduce((a, b) => a[1] > b[1] ? a : b, ["N/A", 0])[0];
+        const mostSoldItem = Object.entries(itemQuantities).reduce(
+            (a, b) => (a[1] > b[1] ? a : b),
+            ["N/A", 0]
+        )[0];
 
         reportList.innerHTML = `
             <div class="report-summary">
@@ -975,27 +1016,59 @@ function loadReports() {
                 <p><strong>Average Daily Sales:</strong> $${avgDailySales}</p>
                 <p><strong>Most Sold Item:</strong> ${mostSoldItem}</p>
             </div>
-            ${reports.map(report => `
+            ${reports
+                .map(
+                    (report) => `
                 <div class="report-item">
                     <p><strong>Date:</strong> ${new Date(report.date).toLocaleDateString()}</p>
                     <p><strong>Total Sales:</strong> $${report.totalSales}</p>
                     <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold)
-                        .map(([item, qty]) => `${item} x${qty}`).join(", ")}</p>
+                        .map(([item, qty]) => `${item} x${qty}`)
+                        .join(", ")}</p>
                     <hr>
-                </div>`).join("")}
+                </div>`
+                )
+                .join("")}
         `;
     }
 
     function displayCreditors() {
-        const unpaidCredits = orderHistory.filter(order => order.payment.method === "Credit" && !order.payment.creditor.paid);
-        const paidCredits = orderHistory.filter(order => order.payment.method === "Credit" && order.payment.creditor.paid);
+        const unpaidCredits = orderHistory.filter(
+            (order) => order.payment.method === "Credit" && !order.payment.creditor.paid
+        );
+        const paidCredits = orderHistory.filter(
+            (order) => order.payment.method === "Credit" && order.payment.creditor.paid
+        );
         if (unpaidCredits.length === 0 && paidCredits.length === 0) {
             reportList.innerHTML = `<p>No creditor records found.</p>`;
             return;
         }
 
-        const totalUnpaidAmount = unpaidCredits.reduce((sum, order) => sum + parseFloat(order.payment.creditor.remainingAmount || order.total), 0).toFixed(2);
-        const totalPaidAmount = paidCredits.reduce((sum, order) => sum + order.payment.creditor.paymentHistory.reduce((ps, p) => ps + parseFloat(p.amount), 0), 0).toFixed(2);
+        const totalUnpaidAmount = unpaidCredits
+            .reduce(
+                (sum, order) =>
+                    sum + parseFloat(order.payment.creditor.remainingAmount || order.total),
+                0
+            )
+            .toFixed(2);
+        const totalPaidAmount = paidCredits
+            .reduce(
+                (sum, order) =>
+                    sum +
+                    order.payment.creditor.paymentHistory.reduce(
+                        (ps, p) => ps + parseFloat(p.amount),
+                        0
+                    ),
+                0
+            )
+            .toFixed(2);
+
+        // Filter unpaid credits based on the search query
+        const filteredUnpaidCredits = unpaidCredits.filter((order) =>
+            order.payment.creditor.name
+                .toLowerCase()
+                .includes(creditorSearchQuery.toLowerCase())
+        );
 
         reportList.innerHTML = `
             <div class="report-summary">
@@ -1004,35 +1077,73 @@ function loadReports() {
                 <p><strong>Total Paid Amount:</strong> $${totalPaidAmount}</p>
             </div>
             <h3>Unpaid Credits</h3>
-            ${unpaidCredits.length > 0 ? unpaidCredits.map((order, index) => `
+            <div class="creditor-search">
+                <input type="text" id="creditorSearch" placeholder="Search by Creditor Name" value="${creditorSearchQuery}">
+            </div>
+            ${
+                filteredUnpaidCredits.length > 0
+                    ? filteredUnpaidCredits
+                          .map(
+                              (order, index) => `
                 <div class="report-item creditor-item">
                     <p><strong>Bill Number:</strong> ${order.billNumber}</p>
                     <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
                     <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
                     <p><strong>Total Amount:</strong> $${order.total}</p>
-                    <p><strong>Remaining Amount:</strong> $${order.payment.creditor.remainingAmount || order.total}</p>
+                    <p><strong>Remaining Amount:</strong> $${
+                        order.payment.creditor.remainingAmount || order.total
+                    }</p>
                     <p><strong>Date:</strong> ${new Date(order.timestamp).toLocaleString()}</p>
-                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${order.billNumber}')">Mark Paid</button>
+                    <button class="btn btn-success btn-small" onclick="markCreditPaid('${
+                        order.billNumber
+                    }')">Mark Paid</button>
                     <hr>
-                </div>`).join("") : "<p>No unpaid credits.</p>"}
+                </div>`
+                          )
+                          .join("")
+                    : "<p>No unpaid credits matching the search.</p>"
+            }
             <h3>Credit Payment History</h3>
-            ${paidCredits.length > 0 ? paidCredits.map(order => `
+            ${
+                paidCredits.length > 0
+                    ? paidCredits
+                          .map(
+                              (order) => `
                 <div class="report-item">
                     <p><strong>Bill Number:</strong> ${order.billNumber}</p>
                     <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
                     <p><strong>Total Amount:</strong> $${order.total}</p>
                     <p><strong>Payments:</strong></p>
                     <ul>
-                        ${order.payment.creditor.paymentHistory.map(payment => `
-                            <li>$${payment.amount} on ${new Date(payment.timestamp).toLocaleString()}</li>
-                        `).join("")}
+                        ${order.payment.creditor.paymentHistory
+                            .map(
+                                (payment) => `
+                            <li>$${payment.amount} on ${new Date(
+                                payment.timestamp
+                            ).toLocaleString()}</li>
+                        `
+                            )
+                            .join("")}
                     </ul>
                     <hr>
-                </div>`).join("") : "<p>No credit payments recorded.</p>"}
+                </div>`
+                          )
+                          .join("")
+                    : "<p>No credit payments recorded.</p>"
+            }
         `;
+
+        // Add event listener for the creditor search input
+        const creditorSearchInput = document.getElementById("creditorSearch");
+        if (creditorSearchInput) {
+            creditorSearchInput.addEventListener("input", () => {
+                creditorSearchQuery = creditorSearchInput.value.trim();
+                displayCreditors(); // Re-render with the updated search query
+            });
+        }
     }
 
-    window.deleteOrder = function(index) {
+    window.deleteOrder = function (index) {
         if (confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
             let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
             allOrders.splice(index, 1);
@@ -1041,9 +1152,9 @@ function loadReports() {
         }
     };
 
-    window.markCreditPaid = function(billNumber) {
+    window.markCreditPaid = function (billNumber) {
         let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
-        const orderIndex = allOrders.findIndex(o => o.billNumber === billNumber);
+        const orderIndex = allOrders.findIndex((o) => o.billNumber === billNumber);
         if (orderIndex === -1) {
             alert("Order not found!");
             return;
@@ -1056,19 +1167,158 @@ function loadReports() {
         }
 
         const remainingAmount = parseFloat(order.payment.creditor.remainingAmount || order.total);
-        const amountPaid = prompt(`Enter amount paid by ${order.payment.creditor.name} (Remaining: $${remainingAmount}):`, remainingAmount);
-        if (!amountPaid || isNaN(amountPaid) || parseFloat(amountPaid) <= 0) {
-            alert("Invalid amount entered!");
-            return;
-        }
 
-        const paidAmount = parseFloat(amountPaid);
-        if (paidAmount > remainingAmount) {
-            alert("Amount paid cannot exceed the remaining amount!");
-            return;
-        }
+        // Create a polished modal for entering the payment amount
+        const modal = document.createElement("div");
+        modal.innerHTML = `
+            <div class="payment-modal-overlay">
+                <div class="payment-modal">
+                    <h2>Record Payment for ${order.payment.creditor.name}</h2>
+                    <p><strong>Bill Number:</strong> ${billNumber}</p>
+                    <p><strong>Total Amount:</strong> $${order.total}</p>
+                    <p><strong>Remaining Amount:</strong> $${remainingAmount.toFixed(2)}</p>
+                    <div class="payment-input">
+                        <input type="number" id="paymentAmount" placeholder="Enter amount to pay" step="0.01" min="0" max="${remainingAmount}">
+                    </div>
+                    <button id="confirmPayment" class="btn btn-primary" disabled>Confirm Payment</button>
+                    <button id="cancelPayment" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
 
-        if (confirm(`Confirm payment of $${paidAmount} for ${order.payment.creditor.name} (Bill: ${billNumber})?`)) {
+        // Add CSS for the modal
+        const style = document.createElement("style");
+        style.textContent = `
+            .payment-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.6);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 1000;
+                animation: fadeIn 0.3s ease-in;
+            }
+            .payment-modal {
+                background: #fff;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                width: 100%;
+                max-width: 400px;
+                text-align: center;
+                animation: slideUp 0.5s ease-out;
+            }
+            .payment-modal h2 {
+                margin-bottom: 20px;
+                color: #333;
+            }
+            .payment-modal p {
+                margin: 5px 0;
+                color: #555;
+            }
+            .payment-input {
+                margin: 20px 0;
+            }
+            .payment-input input {
+                width: 100%;
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 1em;
+                transition: border-color 0.3s ease;
+            }
+            .payment-input input:focus {
+                border-color: #007bff;
+                outline: none;
+            }
+            .btn-primary {
+                background: #007bff;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+            .btn-primary:hover {
+                background: #0056b3;
+            }
+            .btn-primary:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+            .btn-secondary {
+                background: #6c757d;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 8px;
+                margin-left: 10px;
+                cursor: pointer;
+                transition: background 0.3s ease;
+            }
+            .btn-secondary:hover {
+                background: #5a6268;
+            }
+            @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes slideUp {
+                from { transform: translateY(50px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            .creditor-search {
+                margin-bottom: 20px;
+            }
+            .creditor-search input {
+                width: 100%;
+                max-width: 300px;
+                padding: 10px;
+                border: 2px solid #ddd;
+                border-radius: 8px;
+                font-size: 1em;
+            }
+            .creditor-search input:focus {
+                border-color: #007bff;
+                outline: none;
+            }
+        `;
+        document.head.appendChild(style);
+
+        const paymentAmountInput = modal.querySelector("#paymentAmount");
+        const confirmBtn = modal.querySelector("#confirmPayment");
+        const cancelBtn = modal.querySelector("#cancelPayment");
+
+        // Enable/disable the confirm button based on input validation
+        paymentAmountInput.addEventListener("input", () => {
+            const amount = parseFloat(paymentAmountInput.value);
+            confirmBtn.disabled =
+                !amount || amount <= 0 || amount > remainingAmount;
+        });
+
+        confirmBtn.addEventListener("click", () => {
+            const paidAmount = parseFloat(paymentAmountInput.value);
+            if (isNaN(paidAmount) || paidAmount <= 0 || paidAmount > remainingAmount) {
+                alert("Invalid amount entered!");
+                return;
+            }
+
+            if (
+                !confirm(
+                    `Confirm payment of $${paidAmount.toFixed(2)} for ${
+                        order.payment.creditor.name
+                    } (Bill: ${billNumber})?`
+                )
+            ) {
+                return;
+            }
+
             // Initialize paymentHistory if not exists
             if (!order.payment.creditor.paymentHistory) {
                 order.payment.creditor.paymentHistory = [];
@@ -1077,7 +1327,7 @@ function loadReports() {
             // Add payment to history
             order.payment.creditor.paymentHistory.push({
                 amount: paidAmount.toFixed(2),
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
             });
 
             // Update remaining amount
@@ -1090,9 +1340,15 @@ function loadReports() {
             }
 
             // Save updated orderHistory
+            allOrders[orderIndex] = order;
             localStorage.setItem("orderHistory", JSON.stringify(allOrders));
             displayCreditors(); // Refresh display
-        }
+            document.body.removeChild(modal);
+        });
+
+        cancelBtn.addEventListener("click", () => {
+            document.body.removeChild(modal);
+        });
     };
 
     function applyFilter(type) {
@@ -1103,8 +1359,8 @@ function loadReports() {
             case "day":
                 const day = document.getElementById("filterDay")?.value;
                 if (day) {
-                    filteredOrders = filteredOrders.filter(order => 
-                        new Date(order.date).toISOString().split('T')[0] === day
+                    filteredOrders = filteredOrders.filter(
+                        (order) => new Date(order.date).toISOString().split("T")[0] === day
                     );
                     displayOrders(filteredOrders);
                 } else {
@@ -1114,8 +1370,8 @@ function loadReports() {
             case "month":
                 const month = document.getElementById("filterMonth")?.value;
                 if (month) {
-                    const [year, monthNum] = month.split('-');
-                    filteredOrders = filteredOrders.filter(order => {
+                    const [year, monthNum] = month.split("-");
+                    filteredOrders = filteredOrders.filter((order) => {
                         const d = new Date(order.date);
                         return d.getMonth() + 1 === parseInt(monthNum) && d.getFullYear() === parseInt(year);
                     });
@@ -1128,7 +1384,7 @@ function loadReports() {
                 const start = document.getElementById("filterStart")?.value;
                 const end = document.getElementById("filterEnd")?.value;
                 if (start && end) {
-                    filteredOrders = filteredOrders.filter(order => {
+                    filteredOrders = filteredOrders.filter((order) => {
                         const d = new Date(order.date);
                         const startDate = new Date(start);
                         const endDate = new Date(end);
@@ -1158,56 +1414,79 @@ function loadReports() {
 
         switch (type) {
             case "daily":
-                data = currentDailyReports.map(report => ({
+                data = currentDailyReports.map((report) => ({
                     Date: new Date(report.date).toLocaleDateString(),
                     "Total Sales": report.totalSales,
-                    "Items Sold": Object.entries(report.itemsSold).map(([item, qty]) => `${item} x${qty}`).join(", ")
+                    "Items Sold": Object.entries(report.itemsSold)
+                        .map(([item, qty]) => `${item} x${qty}`)
+                        .join(", "),
                 }));
                 filename = "daily_reports.xlsx";
                 break;
             case "creditors":
-                const allCredits = orderHistory.filter(order => order.payment.method === "Credit");
-                data = allCredits.map(order => ({
+                const allCredits = orderHistory.filter(
+                    (order) => order.payment.method === "Credit"
+                );
+                data = allCredits.map((order) => ({
                     "Bill Number": order.billNumber,
                     "Creditor Name": order.payment.creditor.name,
-                    "Mobile": order.payment.creditor.mobile,
+                    Mobile: order.payment.creditor.mobile,
                     "Total Amount": order.total,
-                    "Remaining Amount": order.payment.creditor.paid ? "0.00" : (order.payment.creditor.remainingAmount || order.total),
-                    "Paid": order.payment.creditor.paid ? "Yes" : "No",
-                    "Payment History": order.payment.creditor.paymentHistory ? order.payment.creditor.paymentHistory.map(p => `$${p.amount} on ${new Date(p.timestamp).toLocaleString()}`).join("; ") : "N/A",
-                    "Date": new Date(order.timestamp).toLocaleString()
+                    "Remaining Amount": order.payment.creditor.paid
+                        ? "0.00"
+                        : order.payment.creditor.remainingAmount || order.total,
+                    Paid: order.payment.creditor.paid ? "Yes" : "No",
+                    "Payment History": order.payment.creditor.paymentHistory
+                        ? order.payment.creditor.paymentHistory
+                              .map(
+                                  (p) =>
+                                      `$${p.amount} on ${new Date(p.timestamp).toLocaleString()}`
+                              )
+                              .join("; ")
+                        : "N/A",
+                    Date: new Date(order.timestamp).toLocaleString(),
                 }));
                 filename = "creditors.xlsx";
                 break;
             default:
-                data = currentOrders.flatMap(order => {
+                data = currentOrders.flatMap((order) => {
                     const baseRow = {
                         "Bill Number": order.billNumber || "N/A",
                         Table: order.table,
                         Date: new Date(order.timestamp).toLocaleString(),
                         "Payment Method": order.payment.method,
-                        ...(order.payment.method === "Credit" ? {
-                            "Creditor Name": order.payment.creditor.name,
-                            "Creditor Mobile": order.payment.creditor.mobile,
-                            "Credit Paid": order.payment.creditor.paid ? "Yes" : "No"
-                        } : {}),
-                        "Grand Total": order.total
+                        ...(order.payment.method === "Credit"
+                            ? {
+                                  "Creditor Name": order.payment.creditor.name,
+                                  "Creditor Mobile": order.payment.creditor.mobile,
+                                  "Credit Paid": order.payment.creditor.paid ? "Yes" : "No",
+                              }
+                            : {}),
+                        "Grand Total": order.total,
                     };
                     return order.items.map((item, index) => ({
                         ...baseRow,
                         "Item Name": item.name,
                         "Item Code": item.code,
                         "Item Price": item.price.toFixed(2),
-                        "Quantity": item.qty,
+                        Quantity: item.qty,
                         "Item Total": (item.price * item.qty).toFixed(2),
-                        ...(index === 0 ? {} : { 
-                            "Bill Number": "", 
-                            Table: "", 
-                            Date: "", 
-                            "Payment Method": "", 
-                            "Grand Total": "", 
-                            ...(order.payment.method === "Credit" ? { "Creditor Name": "", "Creditor Mobile": "", "Credit Paid": "" } : {}) 
-                        })
+                        ...(index === 0
+                            ? {}
+                            : {
+                                  "Bill Number": "",
+                                  Table: "",
+                                  Date: "",
+                                  "Payment Method": "",
+                                  "Grand Total": "",
+                                  ...(order.payment.method === "Credit"
+                                      ? {
+                                            "Creditor Name": "",
+                                            "Creditor Mobile": "",
+                                            "Credit Paid": "",
+                                        }
+                                      : {}),
+                              }),
                     }));
                 });
                 filename = "order_history.xlsx";
@@ -1232,7 +1511,9 @@ function loadReports() {
     searchBillBtn.addEventListener("click", () => {
         const billNumber = searchBillInput.value.trim();
         if (billNumber) {
-            const filteredOrders = orderHistory.filter(order => order.billNumber === billNumber);
+            const filteredOrders = orderHistory.filter(
+                (order) => order.billNumber === billNumber
+            );
             displayOrders(filteredOrders);
         } else {
             displayOrders(orderHistory);
