@@ -740,3 +740,17 @@ body {
 .btn-secondary:hover {
     background: #5a6268;
 }
+
+.payment-method-btn {
+    padding: 10px 20px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.payment-method-btn.selected {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
