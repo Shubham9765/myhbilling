@@ -1075,6 +1075,9 @@ function loadReports() {
                     <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
                 `;
                 break;
+            case "item-wise":
+                filterInputs.innerHTML = `<input type="date" id="filterItemWiseDate" class="filter-date">`;
+                break;
             default:
                 filterInputs.innerHTML = "";
                 break;
@@ -1373,6 +1376,91 @@ function loadReports() {
                 displayCreditors(); // Re-render with the updated search query
             });
         }
+    }
+
+    function displayItemWiseDetails(date) {
+        // Filter orders for the selected date
+        const filteredOrders = orderHistory.filter(
+            (order) => new Date(order.timestamp).toISOString().split("T")[0] === date
+        );
+
+        if (filteredOrders.length === 0) {
+            reportList.innerHTML = `<div class="no-data">No orders found for ${new Date(
+                date
+            ).toLocaleDateString()}.</div>`;
+            return;
+        }
+
+        // Aggregate item-wise data
+        const itemDetails = {};
+        filteredOrders.forEach((order) => {
+            order.items.forEach((item) => {
+                const key = `${item.name} (${item.code})`;
+                if (!itemDetails[key]) {
+                    itemDetails[key] = {
+                        name: item.name,
+                        code: item.code,
+                        qty: 0,
+                        totalRevenue: 0,
+                    };
+                }
+                itemDetails[key].qty += item.qty;
+                itemDetails[key].totalRevenue += item.price * item.qty;
+            });
+        });
+
+        // Calculate summary
+        const totalItemsSold = Object.values(itemDetails).reduce(
+            (sum, item) => sum + item.qty,
+            0
+        );
+        const totalRevenue = Object.values(itemDetails)
+            .reduce((sum, item) => sum + item.totalRevenue, 0)
+            .toFixed(2);
+        const mostSoldItem = Object.entries(itemDetails).reduce(
+            (a, b) => (a[1].qty > b[1].qty ? a : b),
+            [null, { qty: 0 }]
+        )[0] || "N/A";
+
+        // Render the report
+        reportList.innerHTML = `
+            <div class="report-summary modern-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Date</span>
+                    <span class="summary-value">${new Date(date).toLocaleDateString()}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Items Sold</span>
+                    <span class="summary-value">${totalItemsSold}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Revenue</span>
+                    <span class="summary-value">$${totalRevenue}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Most Sold Item</span>
+                    <span class="summary-value">${mostSoldItem}</span>
+                </div>
+            </div>
+            <h3 class="section-title">Item-Wise Details</h3>
+            <div class="report-grid">
+                ${Object.values(itemDetails)
+                    .map(
+                        (item) => `
+                    <div class="report-card">
+                        <div class="report-header">
+                            <span class="report-title">${item.name} (${item.code})</span>
+                        </div>
+                        <div class="report-body">
+                            <p><strong>Quantity Sold:</strong> ${item.qty}</p>
+                            <p><strong>Total Revenue:</strong> $${item.totalRevenue.toFixed(2)}</p>
+                            <p><strong>Unit Price:</strong> $${(item.totalRevenue / item.qty).toFixed(2)}</p>
+                        </div>
+                    </div>`
+                    )
+                    .join("")}
+            </div>
+        `;
     }
 
     window.deleteOrder = function (index) {
@@ -1676,7 +1764,7 @@ function loadReports() {
             .payment-modal {
                 background: #fff;
                 padding: 30px;
-                border-radius: 15看看px;
+                border-radius: 15px;
                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
                 width: 100%;
                 max-width: 400px;
@@ -1867,7 +1955,7 @@ function loadReports() {
                 const day = document.getElementById("filterDay")?.value;
                 if (day) {
                     filteredOrders = filteredOrders.filter(
-                        (order) => new Date(order.date).toISOString().split("T")[0] === day
+                        (order) => new Date(order.timestamp).toISOString().split("T")[0] === day
                     );
                     displayOrders(filteredOrders);
                 } else {
@@ -1879,7 +1967,7 @@ function loadReports() {
                 if (month) {
                     const [year, monthNum] = month.split("-");
                     filteredOrders = filteredOrders.filter((order) => {
-                        const d = new Date(order.date);
+                        const d = new Date(order.timestamp);
                         return d.getMonth() + 1 === parseInt(monthNum) && d.getFullYear() === parseInt(year);
                     });
                     displayOrders(filteredOrders);
@@ -1892,7 +1980,7 @@ function loadReports() {
                 const end = document.getElementById("filterEnd")?.value;
                 if (start && end) {
                     filteredOrders = filteredOrders.filter((order) => {
-                        const d = new Date(order.date);
+                        const d = new Date(order.timestamp);
                         const startDate = new Date(start);
                         const endDate = new Date(end);
                         return d >= startDate && d <= endDate;
@@ -1907,6 +1995,14 @@ function loadReports() {
                 break;
             case "creditors":
                 displayCreditors();
+                break;
+            case "item-wise":
+                const itemWiseDate = document.getElementById("filterItemWiseDate")?.value;
+                if (itemWiseDate) {
+                    displayItemWiseDetails(itemWiseDate);
+                } else {
+                    reportList.innerHTML = `<div class="no-data">Please select a date to view item-wise details.</div>`;
+                }
                 break;
             default:
                 displayOrders(orderHistory);
@@ -1954,6 +2050,41 @@ function loadReports() {
                     "Date": new Date(order.timestamp).toLocaleString(),
                 }));
                 filename = "creditors.xlsx";
+                break;
+            case "item-wise":
+                const date = document.getElementById("filterItemWiseDate")?.value;
+                if (!date) {
+                    alert("Please select a date to export item-wise details!");
+                    return;
+                }
+                const filteredOrders = orderHistory.filter(
+                    (order) => new Date(order.timestamp).toISOString().split("T")[0] === date
+                );
+                const itemDetails = {};
+                filteredOrders.forEach((order) => {
+                    order.items.forEach((item) => {
+                        const key = `${item.name} (${item.code})`;
+                        if (!itemDetails[key]) {
+                            itemDetails[key] = {
+                                name: item.name,
+                                code: item.code,
+                                qty: 0,
+                                totalRevenue: 0,
+                            };
+                        }
+                        itemDetails[key].qty += item.qty;
+                        itemDetails[key].totalRevenue += item.price * item.qty;
+                    });
+                });
+                data = Object.values(itemDetails).map((item) => ({
+                    "Item Name": item.name,
+                    "Item Code": item.code,
+                    "Quantity Sold": item.qty,
+                    "Unit Price": (item.totalRevenue / item.qty).toFixed(2),
+                    "Total Revenue": item.totalRevenue.toFixed(2),
+                    "Date": new Date(date).toLocaleDateString(),
+                }));
+                filename = `item_wise_details_${date}.xlsx`;
                 break;
             default:
                 data = currentOrders.flatMap((order) => {
