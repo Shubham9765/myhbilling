@@ -893,6 +893,158 @@ function loadReports() {
         return;
     }
 
+    // Apply modern report page styling immediately
+    const reportStyle = document.createElement("style");
+    reportStyle.id = "report-page-style"; // Add an ID to avoid duplicates
+    reportStyle.textContent = `
+        /* Report Page Styles */
+        .modern-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .summary-item {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .summary-item:hover {
+            transform: translateY(-3px);
+        }
+        .summary-label {
+            display: block;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .summary-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .report-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        .report-header {
+            background: #007bff;
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .report-title {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .report-date {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .report-body {
+            padding: 15px;
+            color: #333;
+        }
+        .report-body p {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        .report-body ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        .report-body li {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        .report-footer {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            text-align: right;
+        }
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-success {
+            background: #28a745;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin: 30px 0 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .creditor-search {
+            margin-bottom: 20px;
+        }
+        .creditor-search input {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        .creditor-search input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .creditor-card .report-header {
+            background: #dc3545;
+        }
+    `;
+    // Remove existing style if it exists to avoid duplicates
+    const existingStyle = document.getElementById("report-page-style");
+    if (existingStyle) {
+        existingStyle.remove();
+    }
+    document.head.appendChild(reportStyle);
+
     let currentOrders = [...orderHistory];
     let currentDailyReports = [...dailyReports];
     let creditorSearchQuery = ""; // To store the search query for creditors
@@ -1246,9 +1398,9 @@ function loadReports() {
         `;
         document.body.appendChild(modal);
 
-        // Add CSS for the modal and report page
-        const style = document.createElement("style");
-        style.textContent = `
+        // Add CSS for the modal only (report page styles are already applied)
+        const modalStyle = document.createElement("style");
+        modalStyle.textContent = `
             /* Modal Styles */
             .payment-modal-overlay {
                 position: fixed;
@@ -1334,149 +1486,8 @@ function loadReports() {
                 from { transform: translateY(50px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
             }
-
-            /* Report Page Styles */
-            .modern-summary {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
-                background: #f8f9fa;
-                padding: 20px;
-                border-radius: 12px;
-                margin-bottom: 30px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-            }
-            .summary-item {
-                background: #fff;
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                transition: transform 0.2s ease;
-            }
-            .summary-item:hover {
-                transform: translateY(-3px);
-            }
-            .summary-label {
-                display: block;
-                font-size: 0.9em;
-                color: #666;
-                margin-bottom: 5px;
-            }
-            .summary-value {
-                font-size: 1.2em;
-                font-weight: bold;
-                color: #333;
-            }
-            .report-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                gap: 20px;
-            }
-            .report-card {
-                background: #fff;
-                border-radius: 12px;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
-                transition: transform 0.2s ease, box-shadow 0.2s ease;
-            }
-            .report-card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            }
-            .report-header {
-                background: #007bff;
-                color: #fff;
-                padding: 15px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
-            .report-title {
-                font-size: 1.1em;
-                font-weight: bold;
-            }
-            .report-date {
-                font-size: 0.9em;
-                opacity: 0.8;
-            }
-            .report-body {
-                padding: 15px;
-                color: #333;
-            }
-            .report-body p {
-                margin: 8px 0;
-                font-size: 0.95em;
-            }
-            .report-body ul {
-                margin: 8px 0;
-                padding-left: 20px;
-            }
-            .report-body li {
-                margin: 5px 0;
-                font-size: 0.9em;
-            }
-            .report-footer {
-                padding: 10px 15px;
-                border-top: 1px solid #eee;
-                text-align: right;
-            }
-            .btn-small {
-                padding: 8px 12px;
-                font-size: 0.9em;
-                border-radius: 6px;
-                transition: background 0.3s ease;
-            }
-            .btn-danger {
-                background: #dc3545;
-                color: #fff;
-            }
-            .btn-danger:hover {
-                background: #c82333;
-            }
-            .btn-success {
-                background: #28a745;
-                color: #fff;
-            }
-            .btn-success:hover {
-                background: #218838;
-            }
-            .section-title {
-                font-size: 1.5em;
-                color: #333;
-                margin: 30px 0 15px;
-                border-bottom: 2px solid #007bff;
-                padding-bottom: 5px;
-            }
-            .no-data {
-                text-align: center;
-                color: #666;
-                font-size: 1.1em;
-                padding: 20px;
-                background: #f8f9fa;
-                border-radius: 8px;
-            }
-            .creditor-search {
-                margin-bottom: 20px;
-            }
-            .creditor-search input {
-                width: 100%;
-                max-width: 300px;
-                padding: 10px;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                font-size: 1em;
-                transition: border-color 0.3s ease;
-            }
-            .creditor-search input:focus {
-                border-color: #007bff;
-                outline: none;
-            }
-            .creditor-card .report-header {
-                background: #dc3545;
-            }
         `;
-        document.head.appendChild(style);
+        document.head.appendChild(modalStyle);
 
         const paymentAmountInput = modal.querySelector("#paymentAmount");
         const confirmBtn = modal.querySelector("#confirmPayment");
