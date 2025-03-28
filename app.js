@@ -1203,140 +1203,6 @@ function loadReports() {
         `;
     }
     
-document.addEventListener("DOMContentLoaded", function() {
-    if (typeof setupSettings === "function") {
-        setupSettings();
-    } else {
-        console.error("setupSettings function not found!");
-    }
-});
-
-function setupSettings() {
-    const gstSettingsForm = document.getElementById("gstSettingsForm");
-    const enableGSTCheckbox = document.getElementById("enableGST");
-    const gstPercentageInput = document.getElementById("gstPercentage");
-    const gstNumberInput = document.getElementById("gstNumber");
-    const gstDetails = document.querySelectorAll(".gst-details");
-
-    // Load existing settings
-    const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
-        enableGST: false,
-        gstPercentage: 5,
-        gstNumber: ""
-    };
-
-    // Apply settings
-    enableGSTCheckbox.checked = settings.enableGST;
-    gstPercentageInput.value = settings.gstPercentage;
-    gstNumberInput.value = settings.gstNumber;
-
-    updateGSTFields(settings.enableGST);
-
-    // Enable/disable GST fields based on checkbox change
-    enableGSTCheckbox.addEventListener("change", () => {
-        const isEnabled = enableGSTCheckbox.checked;
-        updateGSTFields(isEnabled);
-
-        // Save instantly when changed
-        saveGSTSettings();
-    });
-
-    // Save settings on form submit
-    gstSettingsForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        saveGSTSettings();
-        alert("Settings saved successfully!");
-    });
-
-    function updateGSTFields(isEnabled) {
-        gstDetails.forEach(detail => detail.style.display = isEnabled ? "block" : "none");
-        gstPercentageInput.disabled = !isEnabled;
-        gstNumberInput.disabled = !isEnabled;
-    }
-
-    function saveGSTSettings() {
-        const newSettings = {
-            enableGST: enableGSTCheckbox.checked,
-            gstPercentage: parseFloat(gstPercentageInput.value) || 5,
-            gstNumber: gstNumberInput.value.trim()
-        };
-        localStorage.setItem("billingSettings", JSON.stringify(newSettings));
-    }
-}
-
-// Function to display daily reports
-function displayDailyReports(reports) {
-    const reportList = document.getElementById("reportList");
-    if (!reportList) {
-        console.error("reportList element not found!");
-        return;
-    }
-
-    if (reports.length === 0) {
-        reportList.innerHTML = `<div class="no-data">No daily reports found.</div>`;
-        return;
-    }
-
-    // Calculate totals
-    const totalDailyAmount = reports
-        .reduce((sum, report) => sum + (parseFloat(report.totalSales) || 0), 0)
-        .toFixed(2);
-    const totalDailyReports = reports.length;
-    const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
-
-    // Count items sold
-    const itemQuantities = {};
-    reports.forEach((report) => {
-        Object.entries(report.itemsSold || {}).forEach(([item, qty]) => {
-            itemQuantities[item] = (itemQuantities[item] || 0) + qty;
-        });
-    });
-
-    // Get most sold item
-    const mostSoldItem = Object.keys(itemQuantities).length
-        ? Object.entries(itemQuantities).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
-        : "N/A";
-
-    // Render the reports
-    reportList.innerHTML = `
-        <div class="report-summary modern-summary">
-            <div class="summary-item">
-                <span class="summary-label">Total Daily Sales</span>
-                <span class="summary-value">$${totalDailyAmount}</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Total Days</span>
-                <span class="summary-value">${totalDailyReports}</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Average Daily Sales</span>
-                <span class="summary-value">$${avgDailySales}</span>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Most Sold Item</span>
-                <span class="summary-value">${mostSoldItem}</span>
-            </div>
-        </div>
-        <div class="report-grid">
-            ${reports
-                .map(
-                    (report) => `
-                <div class="report-card">
-                    <div class="report-header">
-                        <span class="report-title">Date: ${new Date(report.date).toLocaleDateString()}</span>
-                    </div>
-                    <div class="report-body">
-                        <p><strong>Total Sales:</strong> $${report.totalSales}</p>
-                        <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold || {})
-                            .map(([item, qty]) => `${item} x${qty}`)
-                            .join(", ")}</p>
-                    </div>
-                </div>`
-                )
-                .join("")}
-        </div>
-    `;
-}
 
 // Function to load reports from localStorage
 function loadReports() {
@@ -2335,6 +2201,141 @@ function loadReports() {
         applyFilter(filterType.value);
     });
 }
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof setupSettings === "function") {
+        setupSettings();
+    } else {
+        console.error("setupSettings function not found!");
+    }
+});
+
+function setupSettings() {
+    const gstSettingsForm = document.getElementById("gstSettingsForm");
+    const enableGSTCheckbox = document.getElementById("enableGST");
+    const gstPercentageInput = document.getElementById("gstPercentage");
+    const gstNumberInput = document.getElementById("gstNumber");
+    const gstDetails = document.querySelectorAll(".gst-details");
+
+    // Load existing settings
+    const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+        enableGST: false,
+        gstPercentage: 5,
+        gstNumber: ""
+    };
+
+    // Apply settings
+    enableGSTCheckbox.checked = settings.enableGST;
+    gstPercentageInput.value = settings.gstPercentage;
+    gstNumberInput.value = settings.gstNumber;
+
+    updateGSTFields(settings.enableGST);
+
+    // Enable/disable GST fields based on checkbox change
+    enableGSTCheckbox.addEventListener("change", () => {
+        const isEnabled = enableGSTCheckbox.checked;
+        updateGSTFields(isEnabled);
+
+        // Save instantly when changed
+        saveGSTSettings();
+    });
+
+    // Save settings on form submit
+    gstSettingsForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        saveGSTSettings();
+        alert("Settings saved successfully!");
+    });
+
+    function updateGSTFields(isEnabled) {
+        gstDetails.forEach(detail => detail.style.display = isEnabled ? "block" : "none");
+        gstPercentageInput.disabled = !isEnabled;
+        gstNumberInput.disabled = !isEnabled;
+    }
+
+    function saveGSTSettings() {
+        const newSettings = {
+            enableGST: enableGSTCheckbox.checked,
+            gstPercentage: parseFloat(gstPercentageInput.value) || 5,
+            gstNumber: gstNumberInput.value.trim()
+        };
+        localStorage.setItem("billingSettings", JSON.stringify(newSettings));
+    }
+}
+
+// Function to display daily reports
+function displayDailyReports(reports) {
+    const reportList = document.getElementById("reportList");
+    if (!reportList) {
+        console.error("reportList element not found!");
+        return;
+    }
+
+    if (reports.length === 0) {
+        reportList.innerHTML = `<div class="no-data">No daily reports found.</div>`;
+        return;
+    }
+
+    // Calculate totals
+    const totalDailyAmount = reports
+        .reduce((sum, report) => sum + (parseFloat(report.totalSales) || 0), 0)
+        .toFixed(2);
+    const totalDailyReports = reports.length;
+    const avgDailySales = totalDailyReports > 0 ? (totalDailyAmount / totalDailyReports).toFixed(2) : "0.00";
+
+    // Count items sold
+    const itemQuantities = {};
+    reports.forEach((report) => {
+        Object.entries(report.itemsSold || {}).forEach(([item, qty]) => {
+            itemQuantities[item] = (itemQuantities[item] || 0) + qty;
+        });
+    });
+
+    // Get most sold item
+    const mostSoldItem = Object.keys(itemQuantities).length
+        ? Object.entries(itemQuantities).reduce((a, b) => (a[1] > b[1] ? a : b))[0]
+        : "N/A";
+
+    // Render the reports
+    reportList.innerHTML = `
+        <div class="report-summary modern-summary">
+            <div class="summary-item">
+                <span class="summary-label">Total Daily Sales</span>
+                <span class="summary-value">$${totalDailyAmount}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Total Days</span>
+                <span class="summary-value">${totalDailyReports}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Average Daily Sales</span>
+                <span class="summary-value">$${avgDailySales}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Most Sold Item</span>
+                <span class="summary-value">${mostSoldItem}</span>
+            </div>
+        </div>
+        <div class="report-grid">
+            ${reports
+                .map(
+                    (report) => `
+                <div class="report-card">
+                    <div class="report-header">
+                        <span class="report-title">Date: ${new Date(report.date).toLocaleDateString()}</span>
+                    </div>
+                    <div class="report-body">
+                        <p><strong>Total Sales:</strong> $${report.totalSales}</p>
+                        <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold || {})
+                            .map(([item, qty]) => `${item} x${qty}`)
+                            .join(", ")}</p>
+                    </div>
+                </div>`
+                )
+                .join("")}
+        </div>
+    `;
+}
+
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js").then(() => {
         console.log("Service Worker registered");
