@@ -42,8 +42,13 @@ self.addEventListener("activate", (event) => {
     );
 });
 
-// Fetch event: Serve from cache, then update from network
+// Fetch event: Ignore non-HTTP requests & use cache first
 self.addEventListener("fetch", (event) => {
+    // Ignore requests that are not HTTP(S)
+    if (!event.request.url.startsWith("http")) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             return (
