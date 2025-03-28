@@ -4,13 +4,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const loginTime = localStorage.getItem("loginTime");
     const path = window.location.pathname;
 
-    if (path.includes("settings.html")) {
-        setupSettings();
-    }
-});
 
     if (!path.includes("index.html") && (!loggedInUser || !loginTime)) {
         window.location.href = "index.html";
+
     } else if (loggedInUser && loginTime) {
         const timeElapsed = Date.now() - parseInt(loginTime);
         const twelveHours = 12 * 60 * 60 * 1000;
@@ -36,6 +33,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (path.includes("reports.html")) {
                 loadReports();
             }
+            } else if (path.includes("settings.html")) {
+                setupSettings();
         }
     }
 
