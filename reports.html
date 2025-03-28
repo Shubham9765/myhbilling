@@ -60,7 +60,20 @@
                     </section>
                     <section class="card">
                         <h3>Report Details</h3>
-                        <div id="reportList"></div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Subtotal</th>
+                                    <th>GST Amount</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportTableBody"></tbody>
+                        </table>
+                        <p>Total Sales: <span id="totalSales">₹0.00</span></p>
+                        <p>Total GST Collected: <span id="totalGST">₹0.00</span></p>
+                        <p><b>Grand Total: <span id="grandTotal">₹0.00</span></b></p>
                     </section>
                 </div>
             </div>
