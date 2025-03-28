@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Billing - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Restaurant</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><a href="dashboard.html" class="nav-item">Dashboard</a></li>
+                    <li><a href="tables.html" class="nav-item">Tables</a></li>
+                    <li><a href="menu.html" class="nav-item">Menu</a></li>
+                    <li><a href="reports.html" class="nav-item">Reports</a></li>
+                    <li><a href="settings.html" class="nav-item active">Settings</a></li>
+                    <li><button id="logoutBtn" class="nav-item btn-logout">Logout</button></li>
+                </ul>
+            </nav>
+            <div class="user-info">
+                <span>Logged in as: <strong id="user"></strong></span>
+                <span>Time remaining: <strong id="timer"></strong></span>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <button id="toggleSidebar" class="btn btn-toggle-sidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Settings</h1>
+            </header>
+
+            <div class="settings-container">
+                <section class="card settings-section">
+                    <h3>Billing Enhancements</h3>
+                    <form id="gstSettingsForm" class="form-grid">
+                        <div class="form-group">
+                            <label for="enableGST">Enable GST Billing:</label>
+                            <input type="checkbox" id="enableGST" name="enableGST">
+                        </div>
+                        <div class="form-group gst-details" style="display: none;">
+                            <label for="gstPercentage">GST Percentage (%):</label>
+                            <input type="number" id="gstPercentage" name="gstPercentage" min="0" step="0.1" placeholder="e.g., 5" disabled>
+                        </div>
+                        <div class="form-group gst-details" style="display: none;">
+                            <label for="gstNumber">GST Number:</label>
+                            <input type="text" id="gstNumber" name="gstNumber" placeholder="e.g., 22AAAAA0000A1Z5" disabled>
+                        </div>
+                        <button type="submit" class="btn btn-success">Save Settings</button>
+                    </form>
+                </section>
+            </div>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
