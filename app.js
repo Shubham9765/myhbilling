@@ -1200,6 +1200,46 @@ function loadReports() {
             </div>
         `;
     }
+    function setupSettings() {
+    const gstSettingsForm = document.getElementById("gstSettingsForm");
+    const enableGSTCheckbox = document.getElementById("enableGST");
+    const gstPercentageInput = document.getElementById("gstPercentage");
+    const gstNumberInput = document.getElementById("gstNumber");
+    const gstDetails = document.querySelectorAll(".gst-details");
+
+    // Load existing settings
+    const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+        enableGST: false,
+        gstPercentage: 5,
+        gstNumber: ""
+    };
+    enableGSTCheckbox.checked = settings.enableGST;
+    gstPercentageInput.value = settings.gstPercentage;
+    gstNumberInput.value = settings.gstNumber;
+    gstDetails.forEach(detail => detail.style.display = settings.enableGST ? "block" : "none");
+    gstPercentageInput.disabled = !settings.enableGST;
+    gstNumberInput.disabled = !settings.enableGST;
+
+    // Enable/disable GST fields based on checkbox
+    enableGSTCheckbox.addEventListener("change", () => {
+        const isEnabled = enableGSTCheckbox.checked;
+        gstDetails.forEach(detail => detail.style.display = isEnabled ? "block" : "none");
+        gstPercentageInput.disabled = !isEnabled;
+        gstNumberInput.disabled = !isEnabled;
+    });
+
+    // Save settings on form submit
+    gstSettingsForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const newSettings = {
+            enableGST: enableGSTCheckbox.checked,
+            gstPercentage: parseFloat(gstPercentageInput.value) || 5,
+            gstNumber: gstNumberInput.value.trim()
+        };
+        localStorage.setItem("billingSettings", JSON.stringify(newSettings));
+        alert("Settings saved successfully!");
+    });
+}
 
     function displayDailyReports(reports) {
         currentDailyReports = reports;
