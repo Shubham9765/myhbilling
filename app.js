@@ -4,6 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const loginTime = localStorage.getItem("loginTime");
     const path = window.location.pathname;
 
+    if (path.includes("settings.html")) {
+        setupSettings();
+    }
+});
+
     if (!path.includes("index.html") && (!loggedInUser || !loginTime)) {
         window.location.href = "index.html";
     } else if (loggedInUser && loginTime) {
