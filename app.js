@@ -1203,9 +1203,12 @@ function loadReports() {
         `;
     }
     
-    document.addEventListener("DOMContentLoaded", function () {
-    setupSettings();
-    loadReports();
+document.addEventListener("DOMContentLoaded", function() {
+    if (typeof setupSettings === "function") {
+        setupSettings();
+    } else {
+        console.error("setupSettings function not found!");
+    }
 });
 
 function setupSettings() {
