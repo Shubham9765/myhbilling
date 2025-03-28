@@ -613,7 +613,21 @@ function printReceipt() {
         return;
     }
 
-    const total = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+        enableGST: false,
+        gstPercentage: 5,
+        gstNumber: ""
+    };
+    const subtotal = currentOrder.reduce((sum, item) => sum + item.price * item.qty, 0);
+    let gstAmount = 0, cgstAmount = 0, sgstAmount = 0, total = subtotal;
+
+    if (settings.enableGST) {
+        gstAmount = (subtotal * settings.gstPercentage) / 100;
+        cgstAmount = gstAmount / 2; // 2.5% if GST is 5%
+        sgstAmount = gstAmount / 2; // 2.5% if GST is 5%
+        total = subtotal + gstAmount;
+    }
+
     const billNumber = generateBillNumber();
     const timestamp = new Date().toISOString();
     const restaurantName = "Sample Restaurant";
@@ -638,7 +652,7 @@ function printReceipt() {
         </div>
     `;
     document.body.appendChild(modal);
-
+    
     const style = document.createElement("style");
     style.textContent = `
         .payment-modal-overlay {
@@ -766,6 +780,13 @@ function printReceipt() {
             billNumber: billNumber,
             table: currentTable,
             items: [...currentOrder],
+            subtotal: subtotal.toFixed(2),
+            gst: settings.enableGST ? {
+                percentage: settings.gstPercentage,
+                totalGST: gstAmount.toFixed(2),
+                cgst: cgstAmount.toFixed(2),
+                sgst: sgstAmount.toFixed(2)
+            } : null,
             total: total.toFixed(2),
             timestamp: timestamp,
             date: timestamp.split('T')[0],
@@ -779,6 +800,7 @@ function printReceipt() {
         const receipt = `
             ${restaurantName}
             Restaurant Billing Receipt
+            ${settings.enableGST && settings.gstNumber ? `GSTIN: ${settings.gstNumber}` : ""}
             Bill Number: ${billNumber}
             Table: ${currentTable}
             Date: ${new Date().toLocaleString()}
@@ -786,6 +808,12 @@ function printReceipt() {
             -----------------------
             ${currentOrder.map(item => `${item.name} (${item.code}) x${item.qty} - $${(item.price * item.qty).toFixed(2)}`).join("\n")}
             -----------------------
+            Subtotal: $${subtotal.toFixed(2)}
+            ${settings.enableGST ? `
+            GST (${settings.gstPercentage}%): $${gstAmount.toFixed(2)}
+            CGST (${settings.gstPercentage / 2}%): $${cgstAmount.toFixed(2)}
+            SGST (${settings.gstPercentage / 2}%): $${sgstAmount.toFixed(2)}
+            ` : ""}
             Grand Total: $${total.toFixed(2)}
         `;
 
