@@ -1115,93 +1115,122 @@ function loadReports() {
     }
 
     function calculateSummary(orders) {
-        const totalAmount = orders
-            .reduce((sum, order) => sum + parseFloat(order.total), 0)
-            .toFixed(2);
-        const totalBills = orders.length;
-        const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
-        const itemQuantities = {};
-        orders.forEach((order) => {
-            order.items.forEach((item) => {
-                const key = `${item.name} (${item.code})`;
-                itemQuantities[key] = (itemQuantities[key] || 0) + item.qty;
-            });
+    const gstEnabled = localStorage.getItem("gstEnabled") === "true"; // Check if GST is enabled
+    const gstRate = parseFloat(localStorage.getItem("gstRate") || 0); // Get GST rate
+
+    let totalAmount = orders.reduce((sum, order) => {
+        let orderTotal = parseFloat(order.total);
+        let gstAmount = gstEnabled ? (orderTotal * gstRate) / 100 : 0;
+        return sum + orderTotal + gstAmount;
+    }, 0).toFixed(2);
+
+    const totalBills = orders.length;
+    const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
+
+    const itemQuantities = {};
+    orders.forEach((order) => {
+        order.items.forEach((item) => {
+            const key = `${item.name} (${item.code})`;
+            itemQuantities[key] = (itemQuantities[key] || 0) + item.qty;
         });
-        const mostSoldItem = Object.entries(itemQuantities).reduce(
-            (a, b) => (a[1] > b[1] ? a : b),
-            ["N/A", 0]
-        )[0];
-        return { totalAmount, totalBills, avgBill, mostSoldItem };
+    });
+
+    const mostSoldItem = Object.entries(itemQuantities).reduce(
+        (a, b) => (a[1] > b[1] ? a : b),
+        ["N/A", 0]
+    )[0];
+
+    return { totalAmount, totalBills, avgBill, mostSoldItem };
+}
+
+   function displayOrders(orders) {
+    currentOrders = orders;
+    if (orders.length === 0) {
+        reportList.innerHTML = `<div class="no-data">No orders found.</div>`;
+        return;
     }
 
-    function displayOrders(orders) {
-        currentOrders = orders;
-        if (orders.length === 0) {
-            reportList.innerHTML = `<div class="no-data">No orders found.</div>`;
-            return;
-        }
-        const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
-        reportList.innerHTML = `
-            <div class="report-summary modern-summary">
-                <div class="summary-item">
-                    <span class="summary-label">Total Amount</span>
-                    <span class="summary-value">$${totalAmount}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Total Bills</span>
-                    <span class="summary-value">${totalBills}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Average Bill</span>
-                    <span class="summary-value">$${avgBill}</span>
-                </div>
-                <div class="summary-item">
-                    <span class="summary-label">Most Sold Item</span>
-                    <span class="summary-value">${mostSoldItem}</span>
-                </div>
+    const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
+
+    // Calculate total GST
+    const gstEnabled = localStorage.getItem("gstEnabled") === "true";
+    const gstRate = parseFloat(localStorage.getItem("gstRate") || 0);
+    const totalGST = gstEnabled ? (parseFloat(totalAmount) * gstRate) / (100 + gstRate) : 0;
+
+    reportList.innerHTML = `
+        <div class="report-summary modern-summary">
+            <div class="summary-item">
+                <span class="summary-label">Total Amount (Including GST)</span>
+                <span class="summary-value">₹${totalAmount}</span>
             </div>
-            <div class="report-grid">
-                ${orders
-                    .map(
-                        (order, index) => `
-                    <div class="report-card">
-                        <div class="report-header">
-                            <span class="report-title">Bill Number: ${order.billNumber || "N/A"}</span>
-                            <span class="report-date">${new Date(order.timestamp).toLocaleString()}</span>
-                        </div>
-                        <div class="report-body">
-                            <p><strong>Table:</strong> ${order.table}</p>
-                            <p><strong>Items:</strong> ${order.items
-                                .map(
-                                    (item) =>
-                                        `${item.name} (${item.code}) x${item.qty} - $${(
-                                            item.price * item.qty
-                                        ).toFixed(2)}`
-                                )
-                                .join(", ")}</p>
-                            <p><strong>Total:</strong> $${order.total}</p>
-                            <p><strong>Payment Method:</strong> ${
-                                order.payment.method
-                            }${
-                                order.payment.method === "Credit"
-                                    ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
-                                          order.payment.creditor.mobile
-                                      }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
-                                    : ""
-                            }</p>
-                        </div>
-                        <div class="report-footer">
-                            <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
-                                order.billNumber
-                            }', ${index})">Edit Payment Method</button>
-                            <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
-                        </div>
-                    </div>`
-                    )
-                    .join("")}
+            <div class="summary-item">
+                <span class="summary-label">Total GST Collected</span>
+                <span class="summary-value">₹${totalGST.toFixed(2)}</span>
             </div>
-        `;
-    }
+            <div class="summary-item">
+                <span class="summary-label">Total Bills</span>
+                <span class="summary-value">${totalBills}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Average Bill (Including GST)</span>
+                <span class="summary-value">₹${avgBill}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">Most Sold Item</span>
+                <span class="summary-value">${mostSoldItem}</span>
+            </div>
+        </div>
+        <div class="report-grid">
+            ${orders
+                .map(
+                    (order, index) => {
+                        let orderTotal = parseFloat(order.total);
+                        let gstAmount = gstEnabled ? (orderTotal * gstRate) / 100 : 0;
+                        let totalWithGST = orderTotal + gstAmount;
+
+                        return `
+                        <div class="report-card">
+                            <div class="report-header">
+                                <span class="report-title">Bill Number: ${order.billNumber || "N/A"}</span>
+                                <span class="report-date">${new Date(order.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div class="report-body">
+                                <p><strong>Table:</strong> ${order.table}</p>
+                                <p><strong>Items:</strong> ${order.items
+                                    .map(
+                                        (item) =>
+                                            `${item.name} (${item.code}) x${item.qty} - ₹${(
+                                                item.price * item.qty
+                                            ).toFixed(2)}`
+                                    )
+                                    .join(", ")}</p>
+                                <p><strong>Subtotal:</strong> ₹${orderTotal.toFixed(2)}</p>
+                                <p><strong>GST:</strong> ₹${gstAmount.toFixed(2)}</p>
+                                <p><strong>Total:</strong> ₹${totalWithGST.toFixed(2)}</p>
+                                <p><strong>Payment Method:</strong> ${
+                                    order.payment.method
+                                }${
+                                    order.payment.method === "Credit"
+                                        ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
+                                              order.payment.creditor.mobile
+                                          }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
+                                        : ""
+                                }</p>
+                            </div>
+                            <div class="report-footer">
+                                <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
+                                    order.billNumber
+                                }', ${index})">Edit Payment Method</button>
+                                <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
+                            </div>
+                        </div>`;
+                    }
+                )
+                .join("")}
+        </div>
+    `;
+}
+
     
 
 // Function to load reports from localStorage
