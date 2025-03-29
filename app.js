@@ -1247,10 +1247,351 @@ function loadReports() {
 
 // Function to load reports from localStorage
 function loadReports() {
-    const reports = JSON.parse(localStorage.getItem("dailyReports")) || [];
-    displayDailyReports(reports);
-}
+    const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
+    const dailyReports = JSON.parse(localStorage.getItem("dailyReports")) || [];
+    const reportList = document.getElementById("reportList");
+    const filterType = document.getElementById("filterType");
+    const filterInputs = document.getElementById("filterInputs");
+    const applyFilterBtn = document.getElementById("applyFilter");
+    const searchBillInput = document.getElementById("searchBill");
+    const searchBillBtn = document.getElementById("searchBillBtn");
+    const exportExcelBtn = document.getElementById("exportExcel");
 
+    if (
+        !reportList ||
+        !filterType ||
+        !filterInputs ||
+        !applyFilterBtn ||
+        !searchBillInput ||
+        !searchBillBtn ||
+        !exportExcelBtn
+    ) {
+        console.error("Missing elements:", {
+            reportList: !!reportList,
+            filterType: !!filterType,
+            filterInputs: !!filterInputs,
+            applyFilterBtn: !!applyFilterBtn,
+            searchBillInput: !!searchBillInput,
+            searchBillBtn: !!searchBillBtn,
+            exportExcelBtn: !!exportExcelBtn,
+        });
+        if (reportList)
+            reportList.innerHTML =
+                "<p>Error: Required elements missing in reports.html. Check console for details.</p>";
+        return;
+    }
+
+    // Apply modern report page styling immediately
+    const reportStyle = document.createElement("style");
+    reportStyle.id = "report-page-style"; // Add an ID to avoid duplicates
+    reportStyle.textContent = `
+        /* Report Page Styles */
+        .modern-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+        }
+        .summary-item {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .summary-item:hover {
+            transform: translateY(-3px);
+        }
+        .summary-label {
+            display: block;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .summary-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .report-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        .report-header {
+            background: #007bff;
+            color: #fff;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .report-title {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .report-date {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        .report-body {
+            padding: 15px;
+            color: #333;
+        }
+        .report-body p {
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        .report-body ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        .report-body li {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        .report-footer {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            text-align: right;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .btn-success {
+            background: #28a745;
+            color: #fff;
+        }
+        .btn-success:hover {
+            background: #218838;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin: 30px 0 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .creditor-search {
+            margin-bottom: 20px;
+        }
+        .creditor-search input {
+            width: 100%;
+            max-width: 300px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        .creditor-search input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+        .creditor-card .report-header {
+            background: #dc3545;
+        }
+    `;
+    // Remove existing style if it exists to avoid duplicates
+    const existingStyle = document.getElementById("report-page-style");
+    if (existingStyle) {
+        existingStyle.remove();
+    }
+    document.head.appendChild(reportStyle);
+
+    let currentOrders = [...orderHistory];
+    let currentDailyReports = [...dailyReports];
+    let creditorSearchQuery = ""; // To store the search query for creditors
+
+    function updateFilterInputs() {
+        const type = filterType.value;
+        filterInputs.innerHTML = "";
+        switch (type) {
+            case "day":
+                filterInputs.innerHTML = `<input type="date" id="filterDay" class="filter-date">`;
+                break;
+            case "month":
+                filterInputs.innerHTML = `<input type="month" id="filterMonth" class="filter-date">`;
+                break;
+            case "range":
+                filterInputs.innerHTML = `
+                    <input type="date" id="filterStart" class="filter-date" placeholder="Start Date">
+                    <input type="date" id="filterEnd" class="filter-date" placeholder="End Date">
+                `;
+                break;
+            case "item-wise":
+                filterInputs.innerHTML = `<input type="date" id="filterItemWiseDate" class="filter-date">`;
+                break;
+            default:
+                filterInputs.innerHTML = "";
+                break;
+        }
+    }
+
+    function calculateSummary(orders) {
+        const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+            enableGST: false,
+            gstPercentage: 5,
+            gstNumber: ""
+        };
+        let totalAmount = orders.reduce((sum, order) => parseFloat(order.total), 0).toFixed(2);
+        const totalBills = orders.length;
+        const avgBill = totalBills > 0 ? (totalAmount / totalBills).toFixed(2) : "0.00";
+
+        const itemQuantities = {};
+        orders.forEach((order) => {
+            order.items.forEach((item) => {
+                const key = `${item.name} (${item.code})`;
+                itemQuantities[key] = (itemQuantities[key] || 0) + item.qty;
+            });
+        });
+
+        const mostSoldItem = Object.entries(itemQuantities).reduce(
+            (a, b) => (a[1] > b[1] ? a : b),
+            ["N/A", 0]
+        )[0];
+
+        return { totalAmount, totalBills, avgBill, mostSoldItem };
+    }
+
+    function displayOrders(orders) {
+        currentOrders = orders;
+        if (orders.length === 0) {
+            reportList.innerHTML = `<div class="no-data">No orders found.</div>`;
+            return;
+        }
+
+        const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+            enableGST: false,
+            gstPercentage: 5,
+            gstNumber: ""
+        };
+        const { totalAmount, totalBills, avgBill, mostSoldItem } = calculateSummary(orders);
+        const totalGST = orders.reduce((sum, order) => {
+            return settings.enableGST && order.gst ? sum + parseFloat(order.gst.totalGST) : sum;
+        }, 0).toFixed(2);
+
+        reportList.innerHTML = `
+            <div class="report-summary modern-summary">
+                <div class="summary-item">
+                    <span class="summary-label">Total Amount (Including GST)</span>
+                    <span class="summary-value">₹${totalAmount}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total GST Collected</span>
+                    <span class="summary-value">₹${totalGST}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Total Bills</span>
+                    <span class="summary-value">${totalBills}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Average Bill (Including GST)</span>
+                    <span class="summary-value">₹${avgBill}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Most Sold Item</span>
+                    <span class="summary-value">${mostSoldItem}</span>
+                </div>
+            </div>
+            <div class="report-grid">
+                ${orders
+                    .map(
+                        (order, index) => {
+                            const orderSubtotal = parseFloat(order.subtotal);
+                            const gstAmount = settings.enableGST && order.gst ? parseFloat(order.gst.totalGST) : 0;
+                            const totalWithGST = orderSubtotal + gstAmount;
+
+                            return `
+                            <div class="report-card">
+                                <div class="report-header">
+                                    <span class="report-title">Bill Number: ${order.billNumber || "N/A"}</span>
+                                    <span class="report-date">${new Date(order.timestamp).toLocaleString()}</span>
+                                </div>
+                                <div class="report-body">
+                                    <p><strong>Table:</strong> ${order.table}</p>
+                                    <p><strong>Items:</strong> ${order.items
+                                        .map(
+                                            (item) =>
+                                                `${item.name} (${item.code}) x${item.qty} - ₹${(
+                                                    item.price * item.qty
+                                                ).toFixed(2)}`
+                                        )
+                                        .join(", ")}</p>
+                                    <p><strong>Subtotal:</strong> ₹${orderSubtotal.toFixed(2)}</p>
+                                    ${settings.enableGST && order.gst ? `
+                                    <p><strong>GST (${order.gst.percentage}%):</strong> ₹${gstAmount.toFixed(2)}</p>
+                                    <p><strong>CGST (${order.gst.percentage / 2}%):</strong> ₹${parseFloat(order.gst.cgst).toFixed(2)}</p>
+                                    <p><strong>SGST (${order.gst.percentage / 2}%):</strong> ₹${parseFloat(order.gst.sgst).toFixed(2)}</p>
+                                    ` : ""}
+                                    <p><strong>Total:</strong> ₹${totalWithGST.toFixed(2)}</p>
+                                    <p><strong>Payment Method:</strong> ${
+                                        order.payment.method
+                                    }${
+                                        order.payment.method === "Credit"
+                                            ? ` (Creditor: ${order.payment.creditor.name}, Mobile: ${
+                                                  order.payment.creditor.mobile
+                                              }, Paid: ${order.payment.creditor.paid ? "Yes" : "No"})`
+                                            : ""
+                                    }</p>
+                                </div>
+                                <div class="report-footer">
+                                    <button class="btn btn-warning btn-small" onclick="editPaymentMethod('${
+                                        order.billNumber
+                                    }', ${index})">Edit Payment Method</button>
+                                    <button class="btn btn-danger btn-small delete-btn" onclick="deleteOrder(${index})">Delete</button>
+                                </div>
+                            </div>`;
+                        }
+                    )
+                    .join("")}
+            </div>
+        `;
+    }
 
     function displayDailyReports(reports) {
         currentDailyReports = reports;
@@ -1279,7 +1620,7 @@ function loadReports() {
             <div class="report-summary modern-summary">
                 <div class="summary-item">
                     <span class="summary-label">Total Daily Sales</span>
-                    <span class="summary-value">$${totalDailyAmount}</span>
+                    <span class="summary-value">₹${totalDailyAmount}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Total Days</span>
@@ -1287,7 +1628,7 @@ function loadReports() {
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Average Daily Sales</span>
-                    <span class="summary-value">$${avgDailySales}</span>
+                    <span class="summary-value">₹${avgDailySales}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Most Sold Item</span>
@@ -1305,7 +1646,7 @@ function loadReports() {
                             ).toLocaleDateString()}</span>
                         </div>
                         <div class="report-body">
-                            <p><strong>Total Sales:</strong> $${report.totalSales}</p>
+                            <p><strong>Total Sales:</strong> ₹${report.totalSales}</p>
                             <p><strong>Items Sold:</strong> ${Object.entries(report.itemsSold)
                                 .map(([item, qty]) => `${item} x${qty}`)
                                 .join(", ")}</p>
@@ -1359,7 +1700,7 @@ function loadReports() {
             <div class="report-summary modern-summary">
                 <div class="summary-item">
                     <span class="summary-label">Total Unpaid Amount</span>
-                    <span class="summary-value">$${totalUnpaidAmount}</span>
+                    <span class="summary-value">₹${totalUnpaidAmount}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Total Unpaid Creditors</span>
@@ -1367,7 +1708,7 @@ function loadReports() {
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Total Paid Amount</span>
-                    <span class="summary-value">$${totalPaidAmount}</span>
+                    <span class="summary-value">₹${totalPaidAmount}</span>
                 </div>
             </div>
             <h3 class="section-title">Unpaid Credits</h3>
@@ -1388,8 +1729,8 @@ function loadReports() {
                         <div class="report-body">
                             <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
                             <p><strong>Mobile:</strong> ${order.payment.creditor.mobile}</p>
-                            <p><strong>Total Amount:</strong> $${order.total}</p>
-                            <p><strong>Remaining Amount:</strong> $${
+                            <p><strong>Total Amount:</strong> ₹${order.total}</p>
+                            <p><strong>Remaining Amount:</strong> ₹${
                                 order.payment.creditor.remainingAmount || order.total
                             }</p>
                         </div>
@@ -1420,13 +1761,13 @@ function loadReports() {
                         </div>
                         <div class="report-body">
                             <p><strong>Creditor:</strong> ${order.payment.creditor.name}</p>
-                            <p><strong>Total Amount:</strong> $${order.total}</p>
+                            <p><strong>Total Amount:</strong> ₹${order.total}</p>
                             <p><strong>Payments:</strong></p>
                             <ul>
                                 ${order.payment.creditor.paymentHistory
                                     .map(
                                         (payment) => `
-                                    <li>$${payment.amount} on ${new Date(
+                                    <li>₹${payment.amount} on ${new Date(
                                         payment.timestamp
                                     ).toLocaleString()}</li>
                                 `
@@ -1514,7 +1855,7 @@ function loadReports() {
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Total Revenue</span>
-                    <span class="summary-value">$${totalRevenue}</span>
+                    <span class="summary-value">₹${totalRevenue}</span>
                 </div>
                 <div class="summary-item">
                     <span class="summary-label">Most Sold Item</span>
@@ -1532,8 +1873,8 @@ function loadReports() {
                         </div>
                         <div class="report-body">
                             <p><strong>Quantity Sold:</strong> ${item.qty}</p>
-                            <p><strong>Total Revenue:</strong> $${item.totalRevenue.toFixed(2)}</p>
-                            <p><strong>Unit Price:</strong> $${(item.totalRevenue / item.qty).toFixed(2)}</p>
+                            <p><strong>Total Revenue:</strong> ₹${item.totalRevenue.toFixed(2)}</p>
+                            <p><strong>Unit Price:</strong> ₹${(item.totalRevenue / item.qty).toFixed(2)}</p>
                         </div>
                     </div>`
                     )
@@ -1574,8 +1915,8 @@ function loadReports() {
                 <div class="payment-modal">
                     <h2>Record Payment for ${order.payment.creditor.name}</h2>
                     <p><strong>Bill Number:</strong> ${billNumber}</p>
-                    <p><strong>Total Amount:</strong> $${order.total}</p>
-                    <p><strong>Remaining Amount:</strong> $${remainingAmount.toFixed(2)}</p>
+                    <p><strong>Total Amount:</strong> ₹${order.total}</p>
+                    <p><strong>Remaining Amount:</strong> ₹${remainingAmount.toFixed(2)}</p>
                     <div class="payment-input">
                         <input type="number" id="paymentAmount" placeholder="Enter amount to pay" step="0.01" min="0" max="${remainingAmount}">
                     </div>
@@ -1634,46 +1975,6 @@ function loadReports() {
                 transition: border-color 0.3s ease;
             }
             .payment-input input:focus {
-                border-color: #007bff;
-                outline: none;
-            }
-            .payment-method-options {
-                margin: 20px 0;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 10px;
-                justify-content: center;
-            }
-            .payment-method-btn {
-                padding: 10px 20px;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                background: #f8f9fa;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            .payment-method-btn.selected {
-                background: #007bff;
-                color: #fff;
-                border-color: #007bff;
-            }
-            .payment-method-btn:hover {
-                background: #e9ecef;
-            }
-            .creditor-details {
-                margin: 20px 0;
-                display: none;
-            }
-            .creditor-details input {
-                width: 100%;
-                padding: 10px;
-                margin: 5px 0;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                font-size: 1em;
-                transition: border-color 0.3s ease;
-            }
-            .creditor-details input:focus {
                 border-color: #007bff;
                 outline: none;
             }
@@ -1737,7 +2038,7 @@ function loadReports() {
 
             if (
                 !confirm(
-                    `Confirm payment of $${paidAmount.toFixed(2)} for ${
+                    `Confirm payment of ₹${paidAmount.toFixed(2)} for ${
                         order.payment.creditor.name
                     } (Bill: ${billNumber})?`
                 )
@@ -1762,164 +2063,6 @@ function loadReports() {
 
             // Mark as fully paid if remaining is 0
             if (newRemaining <= 0) {
-                order.payment.creditor.paid = true;
-            }
-
-            // Save updated orderHistory to localStorage
-            allOrders[orderIndex] = order;
-            localStorage.setItem("orderHistory", JSON.stringify(allOrders));
-
-            // Update the orderHistory variable to reflect the changes
-            orderHistory.length = 0;
-            orderHistory.push(...allOrders);
-
-            // Refresh the display with updated data
-            displayCreditors();
-            document.body.removeChild(modal);
-        });
-
-        cancelBtn.addEventListener("click", () => {
-            document.body.removeChild(modal);
-        });
-    };
-
-    window.editPaymentMethod = function (billNumber, orderIndex) {
-        let allOrders = JSON.parse(localStorage.getItem("orderHistory")) || [];
-        const order = allOrders.find((o) => o.billNumber === billNumber);
-        if (!order) {
-            alert("Order not found!");
-            return;
-        }
-
-        // Create a polished modal for editing the payment method
-        const modal = document.createElement("div");
-        modal.innerHTML = `
-            <div class="payment-modal-overlay">
-                <div class="payment-modal">
-                    <h2>Edit Payment Method</h2>
-                    <p><strong>Bill Number:</strong> ${billNumber}</p>
-                    <p><strong>Current Method:</strong> ${
-                        order.payment.method
-                    }${
-                        order.payment.method === "Credit"
-                            ? ` (Creditor: ${order.payment.creditor.name})`
-                            : ""
-                    }</p>
-                    <p><strong>Total Amount:</strong> $${order.total}</p>
-                    <div class="payment-method-options">
-                        <button class="payment-method-btn" data-method="Cash">Cash</button>
-                        <button class="payment-method-btn" data-method="Card">Card</button>
-                        <button class="payment-method-btn" data-method="UPI">UPI</button>
-                        <button class="payment-method-btn" data-method="Credit">Credit</button>
-                    </div>
-                    <div class="creditor-details" id="creditorDetails">
-                        <input type="text" id="creditorName" placeholder="Creditor Name">
-                        <input type="text" id="creditorMobile" placeholder="Creditor Mobile (Optional)">
-                    </div>
-                    <button id="confirmEditPayment" class="btn btn-primary" disabled>Confirm Change</button>
-                    <button id="cancelEditPayment" class="btn btn-secondary">Cancel</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Reuse the modal styles already defined in markCreditPaid
-        const modalStyle = document.createElement("style");
-        modalStyle.textContent = `
-            /* Modal Styles (reused) */
-            .payment-modal-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.6);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 1000;
-                animation: fadeIn 0.3s ease-in;
-            }
-            .payment-modal {
-                background: #fff;
-                padding: 30px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-                width: 100%;
-                max-width: 400px;
-                text-align: center;
-                animation: slideUp 0.5s ease-out;
-            }
-            .payment-modal h2 {
-                margin-bottom: 20px;
-                color: #333;
-                font-size: 1.5em;
-            }
-            .payment-modal p {
-                margin: 5px 0;
-                color: #555;
-            }
-            .payment-method-options {
-                margin: 20px 0;
-                display: flex;
-                flex-wrap: wrap;
-                gap: 10px;
-                justify-content: center;
-            }
-            .payment-method-btn {
-                padding: 10px 20px;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                background: #f8f9fa;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            .payment-method-btn.selected {
-                background: #007bff;
-                color: #fff;
-                border-color: #007bff;
-            }
-            .payment-method-btn:hover {
-                background: #e9ecef;
-            }
-            .creditor-details {
-                margin: 20px 0;
-                display: none;
-            }
-            .creditor-details input {
-                width: 100%;
-                padding: 10px;
-                margin: 5px 0;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                font-size: 1em;
-                transition: border-color 0.3s ease;
-            }
-            .creditor-details input:focus {
-                border-color: #007bff;
-                outline: none;
-            }
-            .btn-primary {
-                background: #007bff;
-                color: #fff;
-                border: none;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: background 0.3s ease;
-            }
-            .btn-primary:hover {
-                background: #0056b3;
-            }
-            .btn-primary:disabled {
-                background: #cccccc;
-                cursor: not-allowed;
-            }
-            .btn-secondary {
-                background: #6c757d;
-                color: #fff;
-                border: none;
-                padding: 10px 20px;
                 border-radius: 8px;
                 margin-left: 10px;
                 cursor: pointer;
