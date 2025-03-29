@@ -53,32 +53,32 @@
                         <div id="currentTableInfo" class="current-table-info"></div>
                     </section>
                     <section class="card order-section">
-                        <h3>Order Details</h3>
-                        <div class="table-wrapper">
-                            <table class="order-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Price</th>
-                                        <th>Qty</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="orderList"></tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="3">Grand Total</td>
-                                        <td id="grandTotal">₹0.00</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        <p>Subtotal: <span id="subtotal">₹0.00</span></p>
-                        <p>GST (if enabled): <span id="gstAmount">₹0.00</span></p>
-                        <p><b>Total Amount:</b> <span id="totalAmount">₹0.00</span></p>
-                        <input type="number" id="itemQty" placeholder="Enter Quantity" min="1" required>
-                        <button id="generateReceipt" class="btn btn-success">Generate Receipt</button>
-                    </section>
+    <h3>Order Details</h3>
+    <div class="table-wrapper">
+        <table class="order-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Price</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody id="orderList"></tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3">Grand Total</td>
+                    <td id="grandTotal">₹0.00</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <p>Subtotal: <span id="subtotal">₹0.00</span></p>
+    <p>GST (if enabled): <span id="gstAmount">₹0.00</span></p>
+    <p><b>Total Amount:</b> <span id="totalAmount">₹0.00</span></p>
+    <input type="number" id="itemQty" placeholder="Enter Quantity" min="1" required>
+    <button id="generateReceipt" class="btn btn-success">Generate Receipt</button>
+</section>
                 </div>
 
                 <!-- Right Panel (Tables) -->
