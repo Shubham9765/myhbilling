@@ -2232,159 +2232,212 @@ function loadReports() {
         }
     }
 
-    function exportToExcel() {
-        const type = filterType.value;
-        let data = [];
-        let filename = "report";
+   function exportToExcel() {
+    const filterType = document.getElementById("filterType");
+    const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
+    const currentOrders = JSON.parse(localStorage.getItem("orderHistory")) || []; // Assuming currentOrders is a global or passed variable
+    const currentDailyReports = JSON.parse(localStorage.getItem("dailyReports")) || []; // Assuming currentDailyReports is a global or passed variable
+    
+    const type = filterType.value;
+    let data = [];
+    let filename = "report";
 
-        switch (type) {
-            case "daily":
-                data = currentDailyReports.map((report) => ({
-                    Date: new Date(report.date).toLocaleDateString(),
-                    "Total Sales": report.totalSales,
-                    "Items Sold": Object.entries(report.itemsSold)
-                        .map(([item, qty]) => `${item} x${qty}`)
-                        .join(", "),
-                }));
-                filename = "daily_reports.xlsx";
-                break;
-            case "creditors":
-                const allCredits = orderHistory.filter(
-                    (order) => order.payment.method === "Credit"
-                );
-                data = allCredits.map((order) => ({
-                    "Bill Number": order.billNumber,
-                    "Creditor Name": order.payment.creditor.name,
-                    "Mobile": order.payment.creditor.mobile,
-                    "Total Amount": order.total,
-                    "Remaining Amount": order.payment.creditor.paid
-                        ? "0.00"
-                        : order.payment.creditor.remainingAmount || order.total,
-                    "Paid": order.payment.creditor.paid ? "Yes" : "No",
-                    "Payment History": order.payment.creditor.paymentHistory
-                        ? order.payment.creditor.paymentHistory
-                              .map(
-                                  (p) =>
-                                      `$${p.amount} on ${new Date(p.timestamp).toLocaleString()}`
-                              )
-                              .join("; ")
-                        : "N/A",
-                    "Date": new Date(order.timestamp).toLocaleString(),
-                }));
-                filename = "creditors.xlsx";
-                break;
-            case "item-wise":
-                const date = document.getElementById("filterItemWiseDate")?.value;
-                if (!date) {
-                    alert("Please select a date to export item-wise details!");
-                    return;
-                }
-                const filteredOrders = orderHistory.filter(
-                    (order) => new Date(order.timestamp).toISOString().split("T")[0] === date
-                );
-                const itemDetails = {};
-                filteredOrders.forEach((order) => {
-                    order.items.forEach((item) => {
-                        const key = `${item.name} (${item.code})`;
-                        if (!itemDetails[key]) {
-                            itemDetails[key] = {
-                                name: item.name,
-                                code: item.code,
-                                qty: 0,
-                                totalRevenue: 0,
-                            };
-                        }
-                        itemDetails[key].qty += item.qty;
-                        itemDetails[key].totalRevenue += item.price * item.qty;
-                    });
+    switch (type) {
+        case "daily":
+            data = currentDailyReports.map((report) => ({
+                Date: new Date(report.date).toLocaleDateString(),
+                "Total Sales": `₹${report.totalSales}`,
+                "Items Sold": Object.entries(report.itemsSold)
+                    .map(([item, qty]) => `${item} x${qty}`)
+                    .join(", "),
+            }));
+            filename = "daily_reports.xlsx";
+            break;
+        case "creditors":
+            const allCredits = orderHistory.filter(
+                (order) => order.payment.method === "Credit"
+            );
+            data = allCredits.map((order) => ({
+                "Bill Number": order.billNumber,
+                "Creditor Name": order.payment.creditor.name,
+                "Mobile": order.payment.creditor.mobile,
+                "Total Amount": `₹${order.total}`,
+                "Remaining Amount": order.payment.creditor.paid
+                    ? "₹0.00"
+                    : `₹${order.payment.creditor.remainingAmount || order.total}`,
+                "Paid": order.payment.creditor.paid ? "Yes" : "No",
+                "Payment History": order.payment.creditor.paymentHistory
+                    ? order.payment.creditor.paymentHistory
+                          .map(
+                              (p) =>
+                                  `₹${p.amount} on ${new Date(p.timestamp).toLocaleString()}`
+                          )
+                          .join("; ")
+                    : "N/A",
+                "Date": new Date(order.timestamp).toLocaleString(),
+            }));
+            filename = "creditors.xlsx";
+            break;
+        case "item-wise":
+            const date = document.getElementById("filterItemWiseDate")?.value;
+            if (!date) {
+                alert("Please select a date to export item-wise details!");
+                return;
+            }
+            const filteredOrders = orderHistory.filter(
+                (order) => new Date(order.timestamp).toISOString().split("T")[0] === date
+            );
+            const itemDetails = {};
+            filteredOrders.forEach((order) => {
+                order.items.forEach((item) => {
+                    const key = `${item.name} (${item.code})`;
+                    if (!itemDetails[key]) {
+                        itemDetails[key] = {
+                            name: item.name,
+                            code: item.code,
+                            qty: 0,
+                            totalRevenue: 0,
+                        };
+                    }
+                    itemDetails[key].qty += item.qty;
+                    itemDetails[key].totalRevenue += item.price * item.qty;
                 });
-                data = Object.values(itemDetails).map((item) => ({
+            });
+            data = Object.values(itemDetails).map((item) => ({
+                "Item Name": item.name,
+                "Item Code": item.code,
+                "Quantity Sold": item.qty,
+                "Unit Price": `₹${(item.totalRevenue / item.qty).toFixed(2)}`,
+                "Total Revenue": `₹${item.totalRevenue.toFixed(2)}`,
+                "Date": new Date(date).toLocaleDateString(),
+            }));
+            filename = `item_wise_details_${date}.xlsx`;
+            break;
+        default:
+            data = currentOrders.flatMap((order) => {
+                const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+                    enableGST: false,
+                    gstPercentage: 5,
+                    gstNumber: ""
+                };
+                const orderSubtotal = parseFloat(order.subtotal);
+                const gstAmount = settings.enableGST && order.gst ? parseFloat(order.gst.totalGST) : 0;
+                const totalWithGST = orderSubtotal + gstAmount;
+
+                const baseRow = {
+                    "Bill Number": order.billNumber || "N/A",
+                    "Table": order.table,
+                    "Date": new Date(order.timestamp).toLocaleString(),
+                    "Payment Method": order.payment.method,
+                    ...(order.payment.method === "Credit"
+                        ? {
+                              "Creditor Name": order.payment.creditor.name,
+                              "Creditor Mobile": order.payment.creditor.mobile,
+                              "Credit Paid": order.payment.creditor.paid ? "Yes" : "No",
+                          }
+                        : {}),
+                    "Subtotal": `₹${orderSubtotal.toFixed(2)}`,
+                    ...(settings.enableGST && order.gst ? {
+                        "GST Percentage": `${order.gst.percentage}%`,
+                        "GST Amount": `₹${gstAmount.toFixed(2)}`,
+                        "CGST": `₹${parseFloat(order.gst.cgst).toFixed(2)}`,
+                        "SGST": `₹${parseFloat(order.gst.sgst).toFixed(2)}`,
+                    } : {}),
+                    "Grand Total": `₹${totalWithGST.toFixed(2)}`,
+                };
+                return order.items.map((item, index) => ({
+                    ...baseRow,
                     "Item Name": item.name,
                     "Item Code": item.code,
-                    "Quantity Sold": item.qty,
-                    "Unit Price": (item.totalRevenue / item.qty).toFixed(2),
-                    "Total Revenue": item.totalRevenue.toFixed(2),
-                    "Date": new Date(date).toLocaleDateString(),
+                    "Item Price": `₹${item.price.toFixed(2)}`,
+                    "Quantity": item.qty,
+                    "Item Total": `₹${(item.price * item.qty).toFixed(2)}`,
+                    ...(index === 0
+                        ? {}
+                        : {
+                              "Bill Number": "",
+                              "Table": "",
+                              "Date": "",
+                              "Payment Method": "",
+                              "Subtotal": "",
+                              ...(settings.enableGST && order.gst ? {
+                                  "GST Percentage": "",
+                                  "GST Amount": "",
+                                  "CGST": "",
+                                  "SGST": "",
+                              } : {}),
+                              "Grand Total": "",
+                              ...(order.payment.method === "Credit"
+                                  ? {
+                                        "Creditor Name": "",
+                                        "Creditor Mobile": "",
+                                        "Credit Paid": "",
+                                    }
+                                  : {}),
+                          }),
                 }));
-                filename = `item_wise_details_${date}.xlsx`;
-                break;
-            default:
-                data = currentOrders.flatMap((order) => {
-                    const baseRow = {
-                        "Bill Number": order.billNumber || "N/A",
-                        "Table": order.table,
-                        "Date": new Date(order.timestamp).toLocaleString(),
-                        "Payment Method": order.payment.method,
-                        ...(order.payment.method === "Credit"
-                            ? {
-                                  "Creditor Name": order.payment.creditor.name,
-                                  "Creditor Mobile": order.payment.creditor.mobile,
-                                  "Credit Paid": order.payment.creditor.paid ? "Yes" : "No",
-                              }
-                            : {}),
-                        "Grand Total": order.total,
-                    };
-                    return order.items.map((item, index) => ({
-                        ...baseRow,
-                        "Item Name": item.name,
-                        "Item Code": item.code,
-                        "Item Price": item.price.toFixed(2),
-                        "Quantity": item.qty,
-                        "Item Total": (item.price * item.qty).toFixed(2),
-                        ...(index === 0
-                            ? {}
-                            : {
-                                  "Bill Number": "",
-                                  "Table": "",
-                                  "Date": "",
-                                  "Payment Method": "",
-                                  "Grand Total": "",
-                                  ...(order.payment.method === "Credit"
-                                      ? {
-                                            "Creditor Name": "",
-                                            "Creditor Mobile": "",
-                                            "Credit Paid": "",
-                                        }
-                                      : {}),
-                              }),
-                    }));
-                });
-                filename = "order_history.xlsx";
-                break;
-        }
-
-        if (data.length === 0) {
-            alert("No data available to export!");
-            return;
-        }
-
-        const ws = XLSX.utils.json_to_sheet(data);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Report");
-        XLSX.writeFile(wb, filename);
+            });
+            filename = "order_history.xlsx";
+            break;
     }
 
-    updateFilterInputs();
-    displayOrders(orderHistory);
+    if (data.length === 0) {
+        alert("No data available to export!");
+        return;
+    }
 
-    applyFilterBtn.addEventListener("click", () => applyFilter(filterType.value));
-    searchBillBtn.addEventListener("click", () => {
-        const billNumber = searchBillInput.value.trim();
-        if (billNumber) {
-            const filteredOrders = orderHistory.filter(
-                (order) => order.billNumber === billNumber
-            );
-            displayOrders(filteredOrders);
-        } else {
-            displayOrders(orderHistory);
-        }
-    });
-    exportExcelBtn.addEventListener("click", exportToExcel);
-    filterType.addEventListener("change", () => {
-        updateFilterInputs();
-        applyFilter(filterType.value);
-    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    XLSX.writeFile(wb, filename);
 }
+
+// Event Listeners (assuming these elements exist in your reports.html)
+document.addEventListener("DOMContentLoaded", function () {
+    const applyFilterBtn = document.getElementById("applyFilter");
+    const searchBillBtn = document.getElementById("searchBillBtn");
+    const exportExcelBtn = document.getElementById("exportExcel");
+    const filterType = document.getElementById("filterType");
+    const searchBillInput = document.getElementById("searchBill");
+
+    // Placeholder functions (you'll need to define these in your full code)
+    function applyFilter(type) {
+        console.log(`Applying filter: ${type}`); // Replace with actual filter logic
+    }
+
+    function displayOrders(orders) {
+        console.log("Displaying orders:", orders); // Replace with actual display logic
+    }
+
+    const orderHistory = JSON.parse(localStorage.getItem("orderHistory")) || [];
+
+    if (applyFilterBtn) {
+        applyFilterBtn.addEventListener("click", () => applyFilter(filterType.value));
+    }
+    if (searchBillBtn && searchBillInput) {
+        searchBillBtn.addEventListener("click", () => {
+            const billNumber = searchBillInput.value.trim();
+            if (billNumber) {
+                const filteredOrders = orderHistory.filter(
+                    (order) => order.billNumber === billNumber
+                );
+                displayOrders(filteredOrders);
+            } else {
+                displayOrders(orderHistory);
+            }
+        });
+    }
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener("click", exportToExcel);
+    }
+    if (filterType) {
+        filterType.addEventListener("change", () => {
+            // Placeholder for updateFilterInputs (define this in your full code)
+            console.log("Filter type changed:", filterType.value);
+            applyFilter(filterType.value);
+        });
+    }
+});
 document.addEventListener("DOMContentLoaded", function() {
     if (typeof setupSettings === "function") {
         setupSettings();
