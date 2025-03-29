@@ -581,12 +581,24 @@ window.deleteItem = function(tableName, index) {
     }
 }
 
-function updateGrandTotal(order) {
-    const total = order.reduce((sum, item) => sum + item.price * item.qty, 0);
-    const grandTotalElement = document.getElementById("grandTotal");
-    if (grandTotalElement) {
-        grandTotalElement.textContent = total.toFixed(2);
+function updateBillingTotals(order) {
+    const settings = JSON.parse(localStorage.getItem("billingSettings")) || {
+        enableGST: false,
+        gstPercentage: 5,
+        gstNumber: ""
+    };
+    const subtotal = order.reduce((sum, item) => sum + item.price * item.qty, 0);
+    let gstAmount = 0, total = subtotal;
+
+    if (settings.enableGST) {
+        gstAmount = (subtotal * settings.gstPercentage) / 100;
+        total = subtotal + gstAmount;
     }
+
+    document.getElementById("subtotal").textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById("gstAmount").textContent = `₹${gstAmount.toFixed(2)}`;
+    document.getElementById("totalAmount").textContent = `₹${total.toFixed(2)}`;
+    document.getElementById("grandTotal").textContent = `₹${total.toFixed(2)}`; // For backward compatibility
 }
 
 function saveOrder() {
