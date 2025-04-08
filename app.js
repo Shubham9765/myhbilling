@@ -1735,8 +1735,7 @@ function loadReports() {
             @keyframes slideUp {
                 from { transform: translateY(50px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
-            }
-        `;
+            };
         document.head.appendChild(modalStyle);
 
         const paymentMethodButtons = modal.querySelectorAll(".payment-method-btn");
